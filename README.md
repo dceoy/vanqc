@@ -1,7 +1,7 @@
 vanqc
 =====
 
-Variant Annotator and QC Checker for Clinical Genome Sequencing
+Variant Annotator and QC Checker for Human Genome Sequencing
 
 [![wercker status](https://app.wercker.com/status/97b0f087b3e5a0a6409aa399611a07bc/s/main "wercker status")](https://app.wercker.com/project/byKey/97b0f087b3e5a0a6409aa399611a07bc)
 

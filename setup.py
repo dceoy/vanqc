@@ -12,9 +12,7 @@ setup(
     version=__version__,
     author='Daichi Narushima',
     author_email='dnarsil+github@gmail.com',
-    description=(
-        'Variant Annotator and QC Checker for Clinical Genome Sequencing'
-    ),
+    description='Variant Annotator and QC Checker for Human Genome Sequencing',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='git@github.com:dceoy/vanqc.git',

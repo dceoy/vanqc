@@ -13,81 +13,41 @@ class DownloadSnpeffDataSource(ShellTask):
     dest_dir_path = luigi.Parameter(default='.')
     snpeff = luigi.Parameter(default='snpEff')
     genome_version = luigi.Parameter(default='GRCh38')
-    snpeff_config_path = luigi.Parameter(default='')
+    data_dir_name = luigi.Parameter(default='snpeff_data')
     memory_mb = luigi.FloatParameter(default=4096)
     log_dir_path = luigi.Parameter(default='')
     quiet = luigi.BoolParameter(default=False)
 
     def output(self):
-        dir_data_paths = self._fetch_existing_snpeff_data()
-        if dir_data_paths:
-            return luigi.LocalTarget(dir_data_paths[0])
-        else:
-            return super().output()
-
-    def complete(self):
-        return bool(self._fetch_existing_snpeff_data())
-
-    def _fetch_existing_snpeff_data(self):
-        dest_dir = Path(self.dest_dir_path).resolve()
-        snpeff_config = dest_dir.joinpath('snpEff.config')
-        if not snpeff_config.is_file():
-            return list()
-        else:
-            data_dir = dest_dir.joinpath('data')
-            with open(snpeff_config, 'r') as f:
-                for s in f:
-                    if re.match(r'\s*data\.dir\s*=\s*\./data/', s):
-                        data_dir = dest_dir.joinpath(
-                            re.sub(r'\s*data\.dir\s*=\s*', '', s.strip())
-                        )
-                        break
-            if not data_dir.is_dir():
-                return list()
-            else:
-                return [
-                    str(o) for o in data_dir.iterdir()
-                    if o.name.startswith(self.genome_version) and o.is_dir()
-                ]
+        return luigi.LocalTarget(
+            Path(self.dest_dir_path).joinpath(self.data_dir_name)
+        )
 
     def run(self):
-        dest_dir = Path(self.dest_dir_path).resolve()
-        self.print_log(f'Download SnpEff data source:\t{dest_dir}')
-        if self.snpeff_config_path:
-            src_config = Path(self.snpeff_config_path).resolve()
-        else:
-            src_config = (
-                Path(self.snpeff.split(' ')[-1]).resolve().parent
-                if self.snpeff.endswith('.jar') else
-                Path(self.snpeff).resolve().parent.parent
-            ).joinpath('snpEff.config')
-        dest_config = dest_dir.joinpath(src_config.name)
+        self.print_log(f'Download SnpEff data source:\t{self.data_dir_name}')
+        data_dir = Path(self.output()).resolve()
         self.setup_shell(
-            run_id=dest_dir.name, log_dir_path=self.log_dir_path,
-            commands=self.snpeff, cwd=dest_dir, quiet=self.quiet,
+            run_id=self.data_dir_name, log_dir_path=self.log_dir_path,
+            commands=self.snpeff, cwd=data_dir.parent, quiet=self.quiet,
             env={'JAVA_TOOL_OPTIONS': '-Xmx{}m'.format(int(self.memory_mb))}
         )
         self.run_shell(
-            args=[
-                f'set -e && cp {src_config} {dest_config}',
-                (
-                    'set -e && '
-                    + f'{self.snpeff} databases'
-                    + f' | grep -e "^{self.genome_version}[\\.0-9]*\\s"'
-                    + ' | cut -f 1'
-                    + f' | xargs {self.snpeff} download'
-                    + f' -verbose -config {dest_config}'
-                )
-            ],
-            input_files_or_dirs=src_config,
-            output_files_or_dirs=dest_config
+            args=(
+                'set -e && '
+                + f'{self.snpeff} databases'
+                + f' | grep -e "^{self.genome_version}[\\.0-9]*\\s"'
+                + ' | cut -f 1'
+                + f' | xargs {self.snpeff} download'
+                + f' -verbose -configOption data.dir={data_dir}'
+            ),
+            output_files_or_dirs=data_dir
         )
 
 
 class AnnotateVcfWithSnpeff(ShellTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
-    snpeff_config_path = luigi.Parameter()
+    data_dir_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
     ref_version = luigi.Parameter(default='hg38')
     snpeff_genome_version = luigi.Parameter(default='')
@@ -134,7 +94,7 @@ class AnnotateVcfWithSnpeff(ShellTask):
         ).resolve()
         run_id = Path(input_vcf.stem).stem
         self.print_log(f'Annotate variants with SnpEff:\t{run_id}')
-        snpeff_config = Path(self.snpeff_config_path).resolve()
+        data_dir = Path(self.data_dir_path).resolve()
         output_vcf = Path(self.output()[0].path)
         dest_dir = output_vcf.parent
         tmp_dir = dest_dir.joinpath(run_id)
@@ -144,8 +104,7 @@ class AnnotateVcfWithSnpeff(ShellTask):
         ]
         genome_version = (
             self.snpeff_genome_version or [
-                o.name for o in snpeff_config.parent.joinpath('data').iterdir()
-                if (
+                o.name for o in data_dir.iterdir() if (
                     o.name.startswith(
                         {'hg38': 'GRCh38', 'hg19': 'GRCh37'}[self.ref_version]
                     ) and o.is_dir()
@@ -162,11 +121,11 @@ class AnnotateVcfWithSnpeff(ShellTask):
         self.run_shell(
             args=(
                 f'set -eo pipefail && cd {tmp_dir} && '
-                + f'{self.snpeff} -verbose -config {snpeff_config}'
+                + f'{self.snpeff} -verbose -configOption data.dir={data_dir}'
                 + f' {genome_version} {input_vcf}'
                 + f' | {self.bgzip} -@ {self.n_cpu} -c > {tmp_files[0]}'
             ),
-            input_files_or_dirs=[input_vcf, tmp_dir],
+            input_files_or_dirs=[input_vcf, data_dir, tmp_dir],
             output_files_or_dirs=[tmp_files[0], tmp_dir]
         )
         for t in tmp_files:

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 """
-Variant Annotator and QC Checker for Clinical Genome Sequencing
+Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
     vanqc download [--debug|--info] [--cpus=<int>] [--ref-ver=<str>]
         [--snpeff-jar=<path>] [--snpeff|--funcotator] [--dest-dir=<path>]
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--ref-ver=<str>] [--snpeff-jar=<path>] [--snpeff-genome=<ver>]
-        [--normalize-vcf] [--dest-dir=<path>] <snpeff_config_path> <fa_path>
+        [--normalize-vcf] [--dest-dir=<path>] <data_dir_path> <fa_path>
         <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--ref-ver=<str>] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
@@ -37,11 +37,10 @@ Options:
     --normalize-vcf         Normalize VCF files
 
 Args:
-    <snpeff_config_path>    Path to a SnpEff config file
     <fa_path>               Path to an reference FASTA file
                             (The index and sequence dictionary are required.)
     <vcf_path>              Path to a VCF file
-    <data_dir_path>         Path to a Funcotator data source directory
+    <data_dir_path>         Path to a data source directory
     <seg_path>              Path to a segment TSV files
 """
 
@@ -133,8 +132,6 @@ def main():
         if args['snpeff']:
             kwargs = {
                 'normalize_vcf': args['--normalize-vcf'],
-                'snpeff_config_path':
-                str(Path(args['<snpeff_config_path>']).resolve()),
                 'snpeff_genome_version': args['--snpeff-genome'],
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 'bcftools': bcftools_path,
