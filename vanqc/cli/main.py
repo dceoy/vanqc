@@ -4,9 +4,12 @@ Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
     vanqc download [--debug|--info] [--cpus=<int>] [--ref-ver=<str>]
-        [--snpeff-jar=<path>] [--snpeff|--funcotator] [--dest-dir=<path>]
+        [--snpeff|--funcotator] [--snpeff-db=<name>] [--snpeff-jar=<path>]
+        [--dest-dir=<path>]
+    vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
+        [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--ref-ver=<str>] [--snpeff-jar=<path>] [--snpeff-genome=<ver>]
+        [--ref-ver=<str>] [--snpeff-jar=<path>] [--snpeff-db=<name>]
         [--normalize-vcf] [--dest-dir=<path>] <data_dir_path> <fa_path>
         <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
@@ -20,8 +23,10 @@ Usage:
 
 Commands:
     download                Download and process GRCh38 resource data
+    normalize               Normalize VCF files using Bcftools
     snpeff                  Annotate VCF files using SnpEff
     funcotator              Annotate VCF files using GATK Funcotator
+    funcotatesegments       Annotate SEG files using GATK FuncotateSegments
 
 Options:
     -h, --help              Print help and exit
@@ -30,8 +35,9 @@ Options:
     --cpus=<int>            Limit CPU cores used
     --ref-ver=<str>         Specify a reference version [default: hg38]
                             {hg38, hg19}
-    --snpeff-jar=<path>     Specify a path to snpEff.jar
     --snpeff, --funcotator  Specify the annotation tool to use
+    --snpeff-jar=<path>     Specify a path to snpEff.jar
+    --snpeff-db=<name>      Specify the SnpEff database
     --dest-dir=<path>       Specify a destination directory path [default: .]
     --skip-cleaning         Skip incomlete file removal when a task fails
     --normalize-vcf         Normalize VCF files
@@ -53,10 +59,11 @@ from docopt import docopt
 from psutil import cpu_count, virtual_memory
 
 from .. import __version__
+from ..task.bcftools import NormalizeVCF
 from ..task.gatk import (AnnotateSegWithFuncotateSegments,
                          AnnotateVcfWithFuncotator,
                          DownloadFuncotatorDataSources)
-from ..task.snpeff import AnnotateVcfWithSnpeff, DownloadSnpeffDataSource
+from ..task.snpeff import AnnotateVcfWithSnpeff, DownloadSnpeffDataSources
 from .builder import build_luigi_tasks
 from .util import fetch_executable, print_log
 
@@ -94,7 +101,7 @@ def main():
             tasks=(
                 (
                     [
-                        DownloadSnpeffDataSource(
+                        DownloadSnpeffDataSources(
                             dest_dir_path=str(dest_dir), snpeff=snpeff,
                             genome_version={
                                 'hg38': 'GRCh38', 'hg19': 'GRCh37'
@@ -118,21 +125,33 @@ def main():
             log_level=log_level
         )
     else:
-        n_vcf = len(args['<vcf_path>'])
-        n_worker = min(n_vcf, n_cpu)
+        n_target = len(
+            args['<seg_path>' if args['funcotatesegments'] else '<vcf_path>']
+        )
+        n_worker = min(n_target, n_cpu)
         common_kwargs = {
-            'fa_path': str(Path(args['<fa_path>']).resolve()),
-            'ref_version': args['--ref-ver'], 'dest_dir_path': str(dest_dir),
-            'n_cpu': (floor(n_cpu / n_vcf) if n_cpu > n_vcf else 1),
+            'fa_path': args['<fa_path>'], 'dest_dir_path': str(dest_dir),
+            'n_cpu': (floor(n_cpu / n_target) if n_cpu > n_target else 1),
             'memory_mb':
             int(virtual_memory().total / 1024 / 1024 / n_worker),
             'remove_if_failed': (not args['--skip-cleaning'])
         }
         bcftools_path = fetch_executable('bcftools')
-        if args['snpeff']:
+        if args['normalize']:
+            kwargs = {'bcftools': bcftools_path, **common_kwargs}
+            build_luigi_tasks(
+                tasks=[
+                    NormalizeVCF(
+                        input_vcf_path=str(Path(p).resolve()), **kwargs
+                    ) for p in args['<vcf_path>']
+                ],
+                workers=n_worker, log_level=log_level
+            )
+        elif args['snpeff']:
             kwargs = {
                 'normalize_vcf': args['--normalize-vcf'],
-                'snpeff_genome_version': args['--snpeff-genome'],
+                'ref_version': args['--ref-ver'],
+                'snpeff_db': args['--snpeff-db'],
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 'bcftools': bcftools_path,
                 **{c: fetch_executable(c) for c in ['bgzip', 'tabix']},
@@ -148,8 +167,8 @@ def main():
             )
         elif args['funcotator'] or args['funcotatesegments']:
             kwargs = {
-                'data_src_dir_path':
-                str(Path(args['<data_dir_path>']).resolve()),
+                'data_src_dir_path': args['<data_dir_path>'],
+                'ref_version': args['--ref-ver'],
                 'gatk': fetch_executable('gatk'), **common_kwargs
             }
             build_luigi_tasks(

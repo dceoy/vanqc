@@ -100,7 +100,7 @@ class ExtractTarFiles(ShellTask):
     def run(self):
         dest_dir = Path(self.dest_dir_path).resolve()
         run_id = dest_dir
-        self.print_log(f'Extract a tar file:\t{run_id}')
+        self.print_log(f'Extract tar files:\t{run_id}')
         tars = [Path(t) for t in self.tar_path]
         output_targets = [Path(o.path) for o in self.output()]
         self.setup_shell(
@@ -130,8 +130,7 @@ class ExtractTarFiles(ShellTask):
         )
         if self.remove_tar_files:
             self.run_shell(
-                args=f'set -e && rm -f {tar_path}',
-                input_files_or_dirs=tar_path
+                args=f'rm -f {tar_path}', input_files_or_dirs=tar_path
             )
 
 

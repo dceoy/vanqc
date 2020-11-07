@@ -9,23 +9,25 @@ from .base import ShellTask
 from .bcftools import NormalizeVCF
 
 
-class DownloadSnpeffDataSource(ShellTask):
+class DownloadSnpeffDataSources(ShellTask):
     dest_dir_path = luigi.Parameter(default='.')
     snpeff = luigi.Parameter(default='snpEff')
     genome_version = luigi.Parameter(default='GRCh38')
     data_dir_name = luigi.Parameter(default='snpeff_data')
+    snpeff_db = luigi.Parameter(default='')
     memory_mb = luigi.FloatParameter(default=4096)
     log_dir_path = luigi.Parameter(default='')
     quiet = luigi.BoolParameter(default=False)
+    priority = 10
 
     def output(self):
         return luigi.LocalTarget(
-            Path(self.dest_dir_path).joinpath(self.data_dir_name)
+            Path(self.dest_dir_path).resolve().joinpath(self.data_dir_name)
         )
 
     def run(self):
-        self.print_log(f'Download SnpEff data source:\t{self.data_dir_name}')
-        data_dir = Path(self.output()).resolve()
+        self.print_log(f'Download SnpEff data sources:\t{self.data_dir_name}')
+        data_dir = Path(self.output().path)
         self.setup_shell(
             run_id=self.data_dir_name, log_dir_path=self.log_dir_path,
             commands=self.snpeff, cwd=data_dir.parent, quiet=self.quiet,
@@ -33,12 +35,17 @@ class DownloadSnpeffDataSource(ShellTask):
         )
         self.run_shell(
             args=(
-                'set -e && '
-                + f'{self.snpeff} databases'
-                + f' | grep -e "^{self.genome_version}[\\.0-9]*\\s"'
-                + ' | cut -f 1'
-                + f' | xargs {self.snpeff} download'
-                + f' -verbose -configOption data.dir={data_dir}'
+                (
+                    f'set -e && {self.snpeff} download'
+                    + f' -verbose -configOption data.dir={data_dir}'
+                    + f' {self.snpeff_db}'
+                ) if self.snpeff_db else (
+                    f'set -eo pipefail && {self.snpeff} databases'
+                    + f' | grep -e "^{self.genome_version}[\\.0-9]*\\s"'
+                    + ' | cut -f 1'
+                    + f' | xargs {self.snpeff} download'
+                    + f' -verbose -configOption data.dir={data_dir}'
+                )
             ),
             output_files_or_dirs=data_dir
         )
@@ -50,7 +57,7 @@ class AnnotateVcfWithSnpeff(ShellTask):
     data_dir_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
     ref_version = luigi.Parameter(default='hg38')
-    snpeff_genome_version = luigi.Parameter(default='')
+    snpeff_db = luigi.Parameter(default='')
     normalize_vcf = luigi.BoolParameter(default=False)
     norm_dir_path = luigi.Parameter(default='')
     bcftools = luigi.Parameter(default='bcftools')
@@ -103,7 +110,7 @@ class AnnotateVcfWithSnpeff(ShellTask):
             in ['snpeff.vcf.gz', 'snpEff_genes.txt', 'snpEff_summary.html']
         ]
         genome_version = (
-            self.snpeff_genome_version or [
+            self.snpeff_db or [
                 o.name for o in data_dir.iterdir() if (
                     o.name.startswith(
                         {'hg38': 'GRCh38', 'hg19': 'GRCh37'}[self.ref_version]

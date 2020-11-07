@@ -22,8 +22,8 @@ RUN set -e \
       && apt-get -y install --no-install-recommends --no-install-suggests \
         apt-transport-https apt-utils ca-certificates curl g++ gcc gnupg \
         libbz2-dev libc-dev libcurl4-gnutls-dev libfreetype6-dev libgsl-dev \
-        liblzma-dev libncurses5-dev libperl-dev libpng-dev libssl-dev \
-        libz-dev make pkg-config python r-base \
+        liblzma-dev libncurses5-dev libmysqlclient-dev libperl-dev libpng-dev \
+        libssl-dev libz-dev make pkg-config python r-base \
       && apt-get -y autoremove \
       && apt-get clean \
       && rm -rf /var/lib/apt/lists/*
@@ -111,8 +111,8 @@ RUN set -ea pipefail \
       && apt-get -y dist-upgrade \
       && apt-get -y install --no-install-recommends --no-install-suggests \
         apt-transport-https apt-utils ca-certificates curl gnupg \
-        libcurl3-gnutls libgsl23 libncurses5 openjdk-8-jre pbzip2 perl pigz \
-        python r-base wget \
+        libcurl3-gnutls libgsl23 libncurses5 libmysqlclient openjdk-8-jre \
+        pbzip2 perl pigz python r-base wget \
       && apt-get -y autoremove \
       && apt-get clean \
       && rm -rf /var/lib/apt/lists/*
