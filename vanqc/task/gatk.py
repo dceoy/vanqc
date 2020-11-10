@@ -5,11 +5,11 @@ from pathlib import Path
 
 import luigi
 
-from .base import ShellTask
 from .bcftools import NormalizeVCF
+from .core import VanqcTask
 
 
-class DownloadFuncotatorDataSources(ShellTask):
+class DownloadFuncotatorDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
     pigz = luigi.Parameter(default='pigz')
@@ -78,7 +78,7 @@ class DownloadFuncotatorDataSources(ShellTask):
             )
 
 
-class ExtractTarFiles(ShellTask):
+class ExtractTarFiles(VanqcTask):
     tar_paths = luigi.ListParameter()
     dest_dir_path = luigi.Parameter(default='.')
     recursive = luigi.BoolParameter(default=True)
@@ -134,7 +134,7 @@ class ExtractTarFiles(ShellTask):
             )
 
 
-class AnnotateVcfWithFuncotator(ShellTask):
+class AnnotateVcfWithFuncotator(VanqcTask):
     input_vcf_path = luigi.Parameter()
     data_src_dir_path = luigi.Parameter()
     fa_path = luigi.Parameter()
@@ -216,7 +216,7 @@ class AnnotateVcfWithFuncotator(ShellTask):
         )
 
 
-class AnnotateSegWithFuncotateSegments(ShellTask):
+class AnnotateSegWithFuncotateSegments(VanqcTask):
     input_seg_path = luigi.Parameter()
     data_src_dir_path = luigi.Parameter()
     fa_path = luigi.Parameter()

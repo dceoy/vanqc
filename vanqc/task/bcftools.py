@@ -5,10 +5,10 @@ from pathlib import Path
 
 import luigi
 
-from .base import ShellTask
+from .core import VanqcTask
 
 
-class NormalizeVCF(ShellTask):
+class NormalizeVCF(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')

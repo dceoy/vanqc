@@ -5,11 +5,11 @@ from pathlib import Path
 
 import luigi
 
-from .base import ShellTask
 from .bcftools import NormalizeVCF
+from .core import VanqcTask
 
 
-class DownloadSnpeffDataSources(ShellTask):
+class DownloadSnpeffDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     snpeff = luigi.Parameter(default='snpEff')
     genome_version = luigi.Parameter(default='GRCh38')
@@ -51,7 +51,7 @@ class DownloadSnpeffDataSources(ShellTask):
         )
 
 
-class AnnotateVcfWithSnpeff(ShellTask):
+class AnnotateVcfWithSnpeff(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
     data_dir_path = luigi.Parameter()
