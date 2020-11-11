@@ -8,7 +8,7 @@ import luigi
 from .core import VanqcTask
 
 
-class NormalizeVCF(VanqcTask):
+class NormalizeVcf(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
@@ -30,9 +30,9 @@ class NormalizeVCF(VanqcTask):
     def run(self):
         input_vcf = Path(self.input_vcf_path).resolve()
         run_id = Path(input_vcf.stem).stem
+        self.print_log(f'Normalize VCF:\t{run_id}')
         fa = Path(self.fa_path).resolve()
         output_vcf = Path(self.output()[0].path)
-        self.print_log(f'Normalize VCF:\t{run_id}')
         self.setup_shell(
             run_id=run_id, log_dir_path=self.log_dir_path,
             commands=self.bcftools, cwd=output_vcf.parent,
@@ -60,6 +60,59 @@ class NormalizeVCF(VanqcTask):
             ),
             input_files_or_dirs=output_vcf,
             output_files_or_dirs=f'{output_vcf}.tbi'
+        )
+
+
+class CollectVcfStats(VanqcTask):
+    input_vcf_path = luigi.Parameter()
+    fa_path = luigi.Parameter()
+    dest_dir_path = luigi.Parameter(default='.')
+    bcftools = luigi.Parameter(default='bcftools')
+    plot_vcfstats = luigi.Parameter(default='plot-vcfstats')
+    n_cpu = luigi.IntParameter(default=1)
+    log_dir_path = luigi.Parameter(default='')
+    remove_if_failed = luigi.BoolParameter(default=True)
+    quiet = luigi.BoolParameter(default=False)
+    priority = 10
+
+    def output(self):
+        output_path_prefix = str(
+            Path(self.dest_dir_path).resolve().joinpath(
+                re.sub(r'\.vcf$', '', Path(self.input_vcf_path).stem)
+                + '.vcf.stats'
+            )
+        )
+        return [
+            luigi.LocalTarget(output_path_prefix + s) for s in ['.txt', '']
+        ]
+
+    def run(self):
+        input_vcf = Path(self.input_vcf_path).resolve()
+        run_id = Path(input_vcf.stem).stem
+        self.print_log(f'Collect VCF stats:\t{run_id}')
+        fa = Path(self.fa_path).resolve()
+        output_txt = Path(self.output()[0].path)
+        plot_dir = Path(self.output()[1].path)
+        self.setup_shell(
+            run_id=run_id, log_dir_path=self.log_dir_path,
+            commands=self.bcftools, cwd=output_txt.parent,
+            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+        )
+        self.run_shell(
+            args=(
+                f'set -e && {self.bcftools} stats --threads {self.n_cpu}'
+                + f' --fasta-ref {fa} {input_vcf} > {output_txt}'
+            ),
+            input_files_or_dirs=[input_vcf, fa, f'{fa}.fai'],
+            output_files_or_dirs=output_txt
+        )
+        self.run_shell(
+            args=(
+                f'set -e && {self.plot_vcfstats} --prefix {plot_dir}'
+                + f' {output_txt}'
+            ),
+            input_files_or_dirs=output_txt,
+            output_files_or_dirs=plot_dir
         )
 
 

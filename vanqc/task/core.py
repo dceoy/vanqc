@@ -108,6 +108,6 @@ class VanqcTask(ShellTask):
             elif n == 'wget':
                 yield f'{c} --version | head -1'
             elif n == 'vep':
-                yield f'{c} | grep -6 -e \'^Versions:\''
+                yield f'{c} | grep -6 -e "Versions:"'
             else:
                 yield f'{c} --version'

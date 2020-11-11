@@ -59,7 +59,7 @@ from docopt import docopt
 from psutil import cpu_count, virtual_memory
 
 from .. import __version__
-from ..task.bcftools import NormalizeVCF
+from ..task.bcftools import NormalizeVcf
 from ..task.gatk import (AnnotateSegWithFuncotateSegments,
                          AnnotateVcfWithFuncotator,
                          DownloadFuncotatorDataSources)
@@ -141,7 +141,7 @@ def main():
             kwargs = {'bcftools': bcftools_path, **common_kwargs}
             build_luigi_tasks(
                 tasks=[
-                    NormalizeVCF(
+                    NormalizeVcf(
                         input_vcf_path=str(Path(p).resolve()), **kwargs
                     ) for p in args['<vcf_path>']
                 ],

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import luigi
 
-from .bcftools import NormalizeVCF
+from .bcftools import NormalizeVcf
 from .core import VanqcTask
 
 
@@ -73,7 +73,7 @@ class AnnotateVcfWithSnpeff(VanqcTask):
 
     def requires(self):
         if self.normalize_vcf:
-            return NormalizeVCF(
+            return NormalizeVcf(
                 input_vcf_path=self.input_vcf_path, fa_path=self.fa_path,
                 dest_dir_path=(self.norm_dir_path or self.dest_dir_path),
                 n_cpu=self.n_cpu, memory_mb=self.memory_mb,
