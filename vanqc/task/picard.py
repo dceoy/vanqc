@@ -5,7 +5,6 @@ from pathlib import Path
 import luigi
 
 from .core import VanqcTask
-from .gatk import generate_gatk_java_options
 
 
 class CollectVariantCallingMetrics(VanqcTask):
@@ -42,7 +41,7 @@ class CollectVariantCallingMetrics(VanqcTask):
             commands=self.picard, cwd=input_vcf.parent,
             remove_if_failed=self.remove_if_failed, quiet=self.quiet,
             env={
-                'JAVA_TOOL_OPTIONS': generate_gatk_java_options(
+                'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
                 )
             }

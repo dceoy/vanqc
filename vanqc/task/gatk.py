@@ -54,7 +54,7 @@ class DownloadFuncotatorDataSources(VanqcTask):
             run_id=dest_dir.name, log_dir_path=self.log_dir_path,
             commands=self.gatk, cwd=dest_dir, quiet=self.quiet,
             env={
-                'JAVA_TOOL_OPTIONS': generate_gatk_java_options(
+                'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
                 )
             }
@@ -129,9 +129,7 @@ class ExtractTarFiles(VanqcTask):
             )
         )
         if self.remove_tar_files:
-            self.run_shell(
-                args=f'rm -f {tar_path}', input_files_or_dirs=tar_path
-            )
+            self.remove_files_and_dirs(tar_path)
 
 
 class AnnotateVcfWithFuncotator(VanqcTask):
@@ -196,7 +194,7 @@ class AnnotateVcfWithFuncotator(VanqcTask):
             cwd=output_files[0].parent, remove_if_failed=self.remove_if_failed,
             quiet=self.quiet,
             env={
-                'JAVA_TOOL_OPTIONS': generate_gatk_java_options(
+                'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
                 )
             }
@@ -250,7 +248,7 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
             cwd=output_tsv.parent, remove_if_failed=self.remove_if_failed,
             quiet=self.quiet,
             env={
-                'JAVA_TOOL_OPTIONS': generate_gatk_java_options(
+                'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
                 )
             }
@@ -268,17 +266,6 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
             input_files_or_dirs=[input_tsv, fa, fa_dict, data_src_dir],
             output_files_or_dirs=output_tsv
         )
-
-
-def generate_gatk_java_options(n_cpu=1, memory_mb=4096):
-    return ' '.join([
-        '-Dsamjdk.compression_level=5',
-        '-Dsamjdk.use_async_io_read_samtools=true',
-        '-Dsamjdk.use_async_io_write_samtools=true',
-        '-Dsamjdk.use_async_io_write_tribble=false',
-        '-Xmx{}m'.format(int(memory_mb)), '-XX:+UseParallelGC',
-        '-XX:ParallelGCThreads={}'.format(int(n_cpu))
-    ])
 
 
 if __name__ == '__main__':

@@ -111,3 +111,25 @@ class VanqcTask(ShellTask):
                 yield f'{c} | grep -6 -e "Versions:"'
             else:
                 yield f'{c} --version'
+
+    @classmethod
+    def remove_files_and_dirs(cls, *paths):
+        cls.run_shell(
+            args=''.join([
+                'rm -{}f'.format(
+                    'r' if any([Path(str(p)).is_dir() for p in paths]) else ''
+                ),
+                *[f' {p}' for p in paths]
+            ])
+        )
+
+    @staticmethod
+    def generate_gatk_java_options(n_cpu=1, memory_mb=4096):
+        return ' '.join([
+            '-Dsamjdk.compression_level=5',
+            '-Dsamjdk.use_async_io_read_samtools=true',
+            '-Dsamjdk.use_async_io_write_samtools=true',
+            '-Dsamjdk.use_async_io_write_tribble=false',
+            '-Xmx{}m'.format(int(memory_mb)), '-XX:+UseParallelGC',
+            '-XX:ParallelGCThreads={}'.format(int(n_cpu))
+        ])

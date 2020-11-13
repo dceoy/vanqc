@@ -142,7 +142,7 @@ class AnnotateVcfWithSnpeff(VanqcTask):
                     args=f'mv {t} {o}', input_files_or_dirs=t,
                     output_files_or_dirs=o
                 )
-        self.run_shell(args=f'rm -rf {tmp_dir}', input_files_or_dirs=tmp_dir)
+        self.remove_files_and_dirs(tmp_dir)
         _tabix_tbi(
             shelltask=self, tabix=self.tabix, tsv_path=str(output_vcf),
             preset='vcf'
