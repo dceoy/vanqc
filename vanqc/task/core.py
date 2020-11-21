@@ -10,9 +10,10 @@ import luigi
 from shoper.shelloperator import ShellOperator
 
 
-class CoreTask(luigi.Task):
+class ShellTask(luigi.Task, metaclass=ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.initialize_shell()
 
     @luigi.Task.event_handler(luigi.Event.PROCESSING_TIME)
     def print_execution_time(self, processing_time):
@@ -29,12 +30,6 @@ class CoreTask(luigi.Task):
         logger = logging.getLogger(cls.__name__)
         logger.info(message)
         print((os.linesep if new_line else '') + f'>>\t{message}', flush=True)
-
-
-class ShellTask(CoreTask, metaclass=ABCMeta):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.initialize_shell()
 
     @classmethod
     def initialize_shell(cls):
@@ -133,3 +128,11 @@ class VanqcTask(ShellTask):
             '-Xmx{}m'.format(int(memory_mb)), '-XX:+UseParallelGC',
             '-XX:ParallelGCThreads={}'.format(int(n_cpu))
         ])
+
+    @classmethod
+    def tabix_tbi(cls, tsv_path, tabix='tabix', preset='vcf'):
+        cls.run_shell(
+            args=f'set -e && {tabix} --preset {preset} {tsv_path}',
+            input_files_or_dirs=tsv_path,
+            output_files_or_dirs=f'{tsv_path}.tbi'
+        )
