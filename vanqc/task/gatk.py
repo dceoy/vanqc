@@ -99,7 +99,7 @@ class ExtractTarFiles(VanqcTask):
 
     def run(self):
         dest_dir = Path(self.dest_dir_path).resolve()
-        run_id = dest_dir
+        run_id = dest_dir.name
         self.print_log(f'Extract tar files:\t{run_id}')
         tars = [Path(t) for t in self.tar_path]
         output_targets = [Path(o.path) for o in self.output()]
@@ -108,28 +108,19 @@ class ExtractTarFiles(VanqcTask):
             commands=[self.pigz, self.pbzip2], cwd=dest_dir
         )
         for i, o in zip(tars, output_targets):
-            self._tar_xf(tar_path=i, dest_dir_path=dest_dir)
+            self.tar_xf(
+                tar_path=i, dest_dir_path=dest_dir,
+                pigz=self.pigz, pbzip2=self.pbzip2, n_cpu=self.n_cpu,
+                remove_tar=self.remove_tar_files
+            )
             if self.recursive and o.is_dir():
                 for f in o.iterdir():
                     if f.name.endswith(('.tar.gz', '.tar.bz2')):
-                        self._tar_xf(tar_path=f, dest_dir_path=o)
-
-    def _tar_xf(self, tar_path, dest_dir_path):
-        self.run_shell(
-            args=(
-                'set -eo pipefail && ' + (
-                    f'{self.pbzip2} -p{self.n_cpu}'
-                    if str(tar_path).endswith('.bz2') else
-                    f'{self.pigz} -p {self.n_cpu}'
-                ) + f' -dc {tar_path} | tar xmvf -'
-            ),
-            cwd=dest_dir_path, input_files_or_dirs=tar_path,
-            output_files_or_dirs=Path(str(dest_dir_path)).joinpath(
-                Path(Path(str(tar_path)).stem).stem
-            )
-        )
-        if self.remove_tar_files:
-            self.remove_files_and_dirs(tar_path)
+                        self.tar_xf(
+                            tar_path=i, dest_dir_path=o, pigz=self.pigz,
+                            pbzip2=self.pbzip2, n_cpu=self.n_cpu,
+                            remove_tar=self.remove_tar_files
+                        )
 
 
 class AnnotateVcfWithFuncotator(VanqcTask):
