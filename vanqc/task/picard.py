@@ -15,9 +15,7 @@ class CollectVariantCallingMetrics(VanqcTask):
     picard = luigi.Parameter(default='picard')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -37,9 +35,8 @@ class CollectVariantCallingMetrics(VanqcTask):
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')
         output_txt = Path(self.output().path)
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=self.picard, cwd=input_vcf.parent,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet,
+            run_id=run_id, commands=self.picard, cwd=input_vcf.parent,
+            **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb

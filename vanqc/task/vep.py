@@ -8,7 +8,7 @@ import luigi
 from .core import VanqcTask
 
 
-class DownloadTar(VanqcTask):
+class DownloadVepCache(VanqcTask):
     src_url = luigi.ListParameter()
     dest_dir_path = luigi.Parameter(default='.')
     extract_tar = luigi.BoolParameter(default=True)
@@ -16,36 +16,31 @@ class DownloadTar(VanqcTask):
     wget = luigi.Parameter(default='wget')
     pbzip2 = luigi.Parameter(default='pbzip2')
     pigz = luigi.Parameter(default='pigz')
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def requires(self):
         return DownloadResourceFiles(
             src_urls=[self.src_url], dest_dir_path=self.dest_dir_path,
             n_cpu=self.n_cpu, wget=self.wget, bgzip=self.bgzip,
-            log_dir_path=self.log_dir_path,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+            sh_config=self.sh_config
         )
 
     def output(self):
         tar_path = self.input()[0].path
         return luigi.LocalTarget(
             Path(self.dest_dir_path).resolve().joinpath(
-                Path(Path(tar_path).stem).stem
+                re.sub(r'_vep_.*$', '',  Path(tar_path).stem)
             ) if self.extract_tar else tar_path
         )
 
     def run(self):
-        run_id = 'data'
-        self.print_log(f'Extract tar files:\t{run_id}')
         tar = Path(self.input()[0].path)
+        self.print_log(f'Extract tar files:\t{tar}')
         output_dir = Path(self.output().path)
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=[self.pigz, self.pbzip2], cwd=output_dir.parent,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+            run_id=tar.stem, commands=[self.pigz, self.pbzip2],
+            cwd=output_dir.parent, **self.sh_config
         )
         self.tar_xf(
             tar_path=tar, dest_dir_path=output_dir, pigz=self.pigz,
@@ -60,9 +55,7 @@ class DownloadResourceFiles(VanqcTask):
     n_cpu = luigi.IntParameter(default=1)
     wget = luigi.Parameter(default='wget')
     bgzip = luigi.Parameter(default='bgzip')
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -81,9 +74,8 @@ class DownloadResourceFiles(VanqcTask):
         self.print_log(f'Download resource files:\t{run_id}')
         dest_dir = Path(self.dest_dir_path).resolve()
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=[self.wget, self.bgzip], cwd=dest_dir,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+            run_id=run_id, commands=[self.wget, self.bgzip], cwd=dest_dir,
+            **self.sh_config
         )
         for u, o in zip(self.src_urls, self.output()):
             t = dest_dir.joinpath(

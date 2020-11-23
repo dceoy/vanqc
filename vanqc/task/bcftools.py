@@ -15,9 +15,7 @@ class NormalizeVcf(VanqcTask):
     bcftools = luigi.Parameter(default='bcftools')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -34,9 +32,8 @@ class NormalizeVcf(VanqcTask):
         fa = Path(self.fa_path).resolve()
         output_vcf = Path(self.output()[0].path)
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=self.bcftools, cwd=output_vcf.parent,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+            run_id=run_id, commands=self.bcftools, cwd=output_vcf.parent,
+            **self.sh_config
         )
         self.run_shell(
             args=(
@@ -70,9 +67,7 @@ class CollectVcfStats(VanqcTask):
     bcftools = luigi.Parameter(default='bcftools')
     plot_vcfstats = luigi.Parameter(default='plot-vcfstats')
     n_cpu = luigi.IntParameter(default=1)
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -94,9 +89,8 @@ class CollectVcfStats(VanqcTask):
         output_txt = Path(self.output()[0].path)
         plot_dir = Path(self.output()[1].path)
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=self.bcftools, cwd=output_txt.parent,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet
+            run_id=run_id, commands=self.bcftools, cwd=output_txt.parent,
+            **self.sh_config
         )
         self.run_shell(
             args=(

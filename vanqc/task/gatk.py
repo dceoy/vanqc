@@ -17,8 +17,8 @@ class DownloadFuncotatorDataSources(VanqcTask):
     extract_tar = luigi.BoolParameter(default=True)
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
+    priority = 10
 
     def output(self):
         dir_data_dict = self._fetch_existing_funcotator_data()
@@ -51,8 +51,8 @@ class DownloadFuncotatorDataSources(VanqcTask):
         self.print_log(f'Download Funcotator data sources:\t{dest_dir}')
         dir_data_dict = self._fetch_existing_funcotator_data()
         self.setup_shell(
-            run_id=dest_dir.name, log_dir_path=self.log_dir_path,
-            commands=self.gatk, cwd=dest_dir, quiet=self.quiet,
+            run_id=dest_dir.name, commands=self.gatk, cwd=dest_dir,
+            **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
@@ -73,8 +73,7 @@ class DownloadFuncotatorDataSources(VanqcTask):
             yield ExtractTarFiles(
                 tar_paths=tar_paths, dest_dir_path=str(dest_dir),
                 pigz=self.pigz, pbzip2=self.pbzip2, n_cpu=self.n_cpu,
-                remove_tar_files=True, log_dir_path=self.log_dir_path,
-                quiet=self.quiet
+                remove_tar_files=True, sh_config=self.sh_config
             )
 
 
@@ -86,8 +85,7 @@ class ExtractTarFiles(VanqcTask):
     pbzip2 = luigi.Parameter(default='pbzip2')
     n_cpu = luigi.IntParameter(default=1)
     remove_tar_files = luigi.BoolParameter(default=False)
-    log_dir_path = luigi.Parameter(default='')
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -104,8 +102,8 @@ class ExtractTarFiles(VanqcTask):
         tars = [Path(t) for t in self.tar_path]
         output_targets = [Path(o.path) for o in self.output()]
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=[self.pigz, self.pbzip2], cwd=dest_dir
+            run_id=run_id, commands=[self.pigz, self.pbzip2], cwd=dest_dir,
+            **self.sh_config
         )
         for i, o in zip(tars, output_targets):
             self.tar_xf(
@@ -135,10 +133,8 @@ class AnnotateVcfWithFuncotator(VanqcTask):
     gatk = luigi.Parameter(default='gatk')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
     output_file_format = luigi.Parameter(default='VCF')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def requires(self):
@@ -147,8 +143,7 @@ class AnnotateVcfWithFuncotator(VanqcTask):
                 input_vcf_path=self.input_vcf_path, fa_path=self.fa_path,
                 dest_dir_path=(self.norm_dir_path or self.dest_dir_path),
                 n_cpu=self.n_cpu, memory_mb=self.memory_mb,
-                bcftools=self.bcftools, log_dir_path=self.log_dir_path,
-                remove_if_failed=self.remove_if_failed, quiet=self.quiet
+                bcftools=self.bcftools, sh_config=self.sh_config
             )
         else:
             return super().requires()
@@ -181,9 +176,8 @@ class AnnotateVcfWithFuncotator(VanqcTask):
         data_src_dir = Path(self.data_src_dir_path).resolve()
         output_files = [Path(o.path) for o in self.output()]
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path, commands=self.gatk,
-            cwd=output_files[0].parent, remove_if_failed=self.remove_if_failed,
-            quiet=self.quiet,
+            run_id=run_id, commands=self.gatk, cwd=output_files[0].parent,
+            **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
@@ -214,9 +208,7 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
     gatk = luigi.Parameter(default='gatk')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -235,9 +227,8 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')
         output_tsv = Path(self.output().path)
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path, commands=self.gatk,
-            cwd=output_tsv.parent, remove_if_failed=self.remove_if_failed,
-            quiet=self.quiet,
+            run_id=run_id, commands=self.gatk, cwd=output_tsv.parent,
+            **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb

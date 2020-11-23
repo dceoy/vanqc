@@ -94,6 +94,11 @@ def main():
     print_log(f'Start the workflow of vanqc {__version__}')
     n_cpu = int(args['--cpus'] or cpu_count())
     memory_mb = virtual_memory().total / 1024 / 1024 / 2
+    sh_config = {
+        'log_dir_path': None,
+        'remove_if_failed': (not args['--skip-cleaning']), 'quiet': False,
+        'executable': fetch_executable('bash')
+    }
     if args['download']:
         if args['--snpeff']:
             snpeff = _fetch_snpeff_sh(jar_path=args['--snpeff-jar'])
@@ -113,7 +118,7 @@ def main():
                             genome_version={
                                 'hg38': 'GRCh38', 'hg19': 'GRCh37'
                             }[args['--ref-ver']],
-                            memory_mb=memory_mb
+                            memory_mb=memory_mb, sh_config=sh_config
                         )
                     ] if snpeff else list()
                 ) + (
@@ -124,7 +129,8 @@ def main():
                                 c: fetch_executable(c)
                                 for c in ['pigz', 'pbzip2']
                             },
-                            n_cpu=n_cpu, memory_mb=memory_mb
+                            n_cpu=n_cpu, memory_mb=memory_mb,
+                            sh_config=sh_config
                         )
                     ] if gatk else list()
                 )
@@ -139,8 +145,7 @@ def main():
         common_kwargs = {
             'fa_path': args['<fa_path>'], 'dest_dir_path': args['--dest-dir'],
             'n_cpu': max(floor(n_cpu / n_worker), 1),
-            'memory_mb': (memory_mb / n_worker),
-            'remove_if_failed': (not args['--skip-cleaning'])
+            'memory_mb': (memory_mb / n_worker), 'sh_config': sh_config
         }
         bcftools = fetch_executable('bcftools')
         if args['normalize']:

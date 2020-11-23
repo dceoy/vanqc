@@ -16,8 +16,7 @@ class DownloadSnpeffDataSources(VanqcTask):
     data_dir_name = luigi.Parameter(default='snpeff_data')
     snpeff_db = luigi.Parameter(default='')
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def output(self):
@@ -26,11 +25,11 @@ class DownloadSnpeffDataSources(VanqcTask):
         )
 
     def run(self):
-        self.print_log(f'Download SnpEff data sources:\t{self.data_dir_name}')
         data_dir = Path(self.output().path)
+        self.print_log(f'Download SnpEff data sources:\t{data_dir}')
         self.setup_shell(
-            run_id=self.data_dir_name, log_dir_path=self.log_dir_path,
-            commands=self.snpeff, cwd=data_dir.parent, quiet=self.quiet,
+            run_id=self.data_dir_name, commands=self.snpeff,
+            cwd=data_dir.parent, **self.sh_config,
             env={'JAVA_TOOL_OPTIONS': '-Xmx{}m'.format(int(self.memory_mb))}
         )
         self.run_shell(
@@ -66,9 +65,7 @@ class AnnotateVcfWithSnpeff(VanqcTask):
     tabix = luigi.Parameter(default='tabix')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    log_dir_path = luigi.Parameter(default='')
-    remove_if_failed = luigi.BoolParameter(default=True)
-    quiet = luigi.BoolParameter(default=False)
+    sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
     def requires(self):
@@ -77,8 +74,7 @@ class AnnotateVcfWithSnpeff(VanqcTask):
                 input_vcf_path=self.input_vcf_path, fa_path=self.fa_path,
                 dest_dir_path=(self.norm_dir_path or self.dest_dir_path),
                 n_cpu=self.n_cpu, memory_mb=self.memory_mb,
-                bcftools=self.bcftools, log_dir_path=self.log_dir_path,
-                remove_if_failed=self.remove_if_failed, quiet=self.quiet
+                bcftools=self.bcftools, sh_config=self.sh_config
             )
         else:
             return super().requires()
@@ -119,9 +115,8 @@ class AnnotateVcfWithSnpeff(VanqcTask):
             ][0]
         )
         self.setup_shell(
-            run_id=run_id, log_dir_path=self.log_dir_path,
-            commands=[self.snpeff, self.bgzip, self.tabix], cwd=dest_dir,
-            remove_if_failed=self.remove_if_failed, quiet=self.quiet,
+            run_id=run_id, commands=[self.snpeff, self.bgzip, self.tabix],
+            cwd=dest_dir, **self.sh_config,
             env={'JAVA_TOOL_OPTIONS': '-Xmx{}m'.format(int(self.memory_mb))}
         )
         self.run_shell(args=f'mkdir {tmp_dir}', output_files_or_dirs=tmp_dir)
