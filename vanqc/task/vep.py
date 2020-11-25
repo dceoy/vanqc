@@ -8,14 +8,14 @@ import luigi
 from .core import VanqcTask
 
 
-class DownloadVepCache(VanqcTask):
+class DownloadEnsemblVepCache(VanqcTask):
     src_url = luigi.ListParameter()
     dest_dir_path = luigi.Parameter(default='.')
     extract_tar = luigi.BoolParameter(default=True)
-    n_cpu = luigi.IntParameter(default=1)
     wget = luigi.Parameter(default='wget')
-    pbzip2 = luigi.Parameter(default='pbzip2')
     pigz = luigi.Parameter(default='pigz')
+    pbzip2 = luigi.Parameter(default='pbzip2')
+    n_cpu = luigi.IntParameter(default=1)
     sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
@@ -44,17 +44,17 @@ class DownloadVepCache(VanqcTask):
         )
         self.tar_xf(
             tar_path=tar, dest_dir_path=output_dir, pigz=self.pigz,
-            pbzip2=self.pbzip2, n_cpu=self.n_cpu,
-            remove_tar=self.remove_tar_files
+            pbzip2=self.pbzip2, n_cpu=self.n_cpu, remove_tar=True
         )
 
 
 class DownloadResourceFiles(VanqcTask):
     src_urls = luigi.ListParameter()
     dest_dir_path = luigi.Parameter(default='.')
-    n_cpu = luigi.IntParameter(default=1)
+    run_id = luigi.Parameter(default='data')
     wget = luigi.Parameter(default='wget')
     bgzip = luigi.Parameter(default='bgzip')
+    n_cpu = luigi.IntParameter(default=1)
     sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
@@ -70,28 +70,24 @@ class DownloadResourceFiles(VanqcTask):
                 yield luigi.LocalTarget(p)
 
     def run(self):
-        run_id = 'data'
-        self.print_log(f'Download resource files:\t{run_id}')
         dest_dir = Path(self.dest_dir_path).resolve()
+        self.print_log(f'Download resource files:\t{dest_dir}')
         self.setup_shell(
-            run_id=run_id, commands=[self.wget, self.bgzip], cwd=dest_dir,
+            run_id=self.run_id, commands=[self.wget, self.bgzip], cwd=dest_dir,
             **self.sh_config
         )
         for u, o in zip(self.src_urls, self.output()):
             t = dest_dir.joinpath(
                 (Path(u).stem + '.gz') if u.endswith('.bgz') else Path(u).name
             )
-            p = o.path
             self.run_shell(
                 args=f'set -e && {self.wget} -qSL {u} -O {t}',
                 output_files_or_dirs=t
             )
-            if t == p:
-                pass
-            elif p.endswith('.gz'):
+            if t.suffix != '.gz' and o.path.endswith('.gz'):
                 self.run_shell(
                     args=f'set -e && {self.bgzip} -@ {self.n_cpu} {t}',
-                    input_files_or_dirs=t, output_files_or_dirs=p
+                    input_files_or_dirs=t, output_files_or_dirs=o.path
                 )
 
 

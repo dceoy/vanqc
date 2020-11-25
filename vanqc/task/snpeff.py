@@ -50,7 +50,7 @@ class DownloadSnpeffDataSources(VanqcTask):
         )
 
 
-class AnnotateVcfWithSnpeff(VanqcTask):
+class AnnotateVariantsWithSnpeff(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
     data_dir_path = luigi.Parameter()

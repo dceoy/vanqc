@@ -121,7 +121,7 @@ class ExtractTarFiles(VanqcTask):
                         )
 
 
-class AnnotateVcfWithFuncotator(VanqcTask):
+class AnnotateVariantsWithFuncotator(VanqcTask):
     input_vcf_path = luigi.Parameter()
     data_src_dir_path = luigi.Parameter()
     fa_path = luigi.Parameter()

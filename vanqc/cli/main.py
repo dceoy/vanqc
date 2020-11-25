@@ -4,8 +4,8 @@ Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
     vanqc download [--debug|--info] [--cpus=<int>] [--ref-ver=<str>]
-        [--snpeff|--funcotator] [--snpeff-db=<name>] [--snpeff-jar=<path>]
-        [--dest-dir=<path>]
+        [--snpeff|--funcotator|--vep] [--snpeff-db=<name>]
+        [--snpeff-jar=<path>] [--dest-dir=<path>]
     vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
@@ -28,9 +28,9 @@ Usage:
 Commands:
     download                Download and process GRCh38 resource data
     normalize               Normalize VCF files using Bcftools
-    snpeff                  Annotate VCF files using SnpEff
-    funcotator              Annotate VCF files using GATK Funcotator
-    funcotatesegments       Annotate SEG files using GATK FuncotateSegments
+    snpeff                  Annotate variants using SnpEff
+    funcotator              Annotate variants using GATK Funcotator
+    funcotatesegments       Annotate segments using GATK FuncotateSegments
     stats                   Collect VCF stats using Bcftools
     metrics                 Collect variant calling metrics using GATK (Picard)
 
@@ -41,7 +41,8 @@ Options:
     --cpus=<int>            Limit CPU cores used
     --ref-ver=<str>         Specify a reference version [default: hg38]
                             {hg38, hg19}
-    --snpeff, --funcotator  Specify the annotation tool to use
+    --snpeff, --funcotator, --vep
+                            Specify the annotation tool to use
     --snpeff-jar=<path>     Specify a path to snpEff.jar
     --snpeff-db=<name>      Specify the SnpEff database
     --dest-dir=<path>       Specify a destination directory path [default: .]
@@ -68,12 +69,13 @@ from psutil import cpu_count, virtual_memory
 from .. import __version__
 from ..task.bcftools import CollectVcfStats, NormalizeVcf
 from ..task.gatk import (AnnotateSegWithFuncotateSegments,
-                         AnnotateVcfWithFuncotator,
+                         AnnotateVariantsWithFuncotator,
                          DownloadFuncotatorDataSources)
 from ..task.picard import CollectVariantCallingMetrics
-from ..task.snpeff import AnnotateVcfWithSnpeff, DownloadSnpeffDataSources
+from ..task.snpeff import AnnotateVariantsWithSnpeff, DownloadSnpeffDataSources
+from ..task.vep import DownloadEnsemblVepCache
 from .builder import build_luigi_tasks
-from .util import fetch_executable, print_log
+from .util import fetch_executable, load_default_dict, print_log
 
 
 def main():
@@ -100,39 +102,45 @@ def main():
         'executable': fetch_executable('bash')
     }
     if args['download']:
-        if args['--snpeff']:
-            snpeff = _fetch_snpeff_sh(jar_path=args['--snpeff-jar'])
-            gatk = None
-        elif args['--funcotator']:
-            snpeff = None
-            gatk = fetch_executable('gatk')
-        else:
-            snpeff = _fetch_snpeff_sh(jar_path=args['--snpeff-jar'])
-            gatk = fetch_executable('gatk')
+        anns = (
+            {k for k in ['snpeff', 'funcotator', 'vep'] if args[f'--{k}']}
+            or {'snpeff', 'funcotator', 'vep'}
+        )
+        common_kwargs = {
+            'dest_dir_path': args['--dest-dir'], 'sh_config': sh_config
+        }
+        snpeff_kwargs = (
+            {
+                'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
+                'genome_version':
+                ('GRCh37' if args['--ref-ver'] == 'hg19' else 'GRCh38'),
+                'memory_mb': memory_mb, **common_kwargs
+            } if 'snpeff' in anns else None
+        )
+        gatk_kwargs = (
+            {
+                **{c: fetch_executable(c) for c in ['gatk', 'pigz']},
+                'n_cpu': n_cpu, 'memory_mb': memory_mb, **common_kwargs
+            } if 'gatk' in anns else None
+        )
+        vep_kwargs = (
+            {
+                'src_url': load_default_dict('urls')['ensembl_vep_cache'],
+                **{c: fetch_executable(c) for c in ['wget', 'pigz']},
+                'n_cpu': n_cpu, **common_kwargs
+            } if 'vep' in anns else None
+        )
         build_luigi_tasks(
             tasks=(
                 (
-                    [
-                        DownloadSnpeffDataSources(
-                            dest_dir_path=args['--dest-dir'], snpeff=snpeff,
-                            genome_version={
-                                'hg38': 'GRCh38', 'hg19': 'GRCh37'
-                            }[args['--ref-ver']],
-                            memory_mb=memory_mb, sh_config=sh_config
-                        )
-                    ] if snpeff else list()
+                    [DownloadSnpeffDataSources(**snpeff_kwargs)]
+                    if snpeff_kwargs else list()
                 ) + (
-                    [
-                        DownloadFuncotatorDataSources(
-                            dest_dir_path=args['--dest-dir'], gatk=gatk,
-                            **{
-                                c: fetch_executable(c)
-                                for c in ['pigz', 'pbzip2']
-                            },
-                            n_cpu=n_cpu, memory_mb=memory_mb,
-                            sh_config=sh_config
-                        )
-                    ] if gatk else list()
+                    [DownloadFuncotatorDataSources(**gatk_kwargs)]
+                    if gatk_kwargs else list()
+                ) + (
+                    [DownloadEnsemblVepCache(**vep_kwargs)]
+                    if vep_kwargs else list()
                 )
             ),
             log_level=log_level
@@ -170,7 +178,7 @@ def main():
             }
             build_luigi_tasks(
                 tasks=[
-                    AnnotateVcfWithSnpeff(input_vcf_path=p, **kwargs)
+                    AnnotateVariantsWithSnpeff(input_vcf_path=p, **kwargs)
                     for p in args['<vcf_path>']
                 ],
                 workers=n_worker, log_level=log_level
@@ -185,7 +193,7 @@ def main():
             }
             build_luigi_tasks(
                 tasks=[
-                    AnnotateVcfWithFuncotator(input_vcf_path=p, **kwargs)
+                    AnnotateVariantsWithFuncotator(input_vcf_path=p, **kwargs)
                     for p in args['<vcf_path>']
                 ],
                 workers=n_worker, log_level=log_level

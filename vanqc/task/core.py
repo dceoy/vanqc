@@ -68,6 +68,18 @@ class ShellTask(luigi.Task, metaclass=ABCMeta):
             cls.run_shell(args=list(cls.generate_version_commands(commands)))
 
     @classmethod
+    def remove_files_and_dirs(cls, *paths):
+        targets = [Path(str(p)) for p in paths if Path(str(p)).exists()]
+        if targets:
+            cls.run_shell(
+                args=' '.join([
+                    'rm',
+                    ('-rf' if [t for t in targets if t.is_dir()] else '-f'),
+                    *[str(t) for t in targets]
+                ])
+            )
+
+    @classmethod
     def run_shell(cls, *args, **kwargs):
         logger = logging.getLogger(cls.__name__)
         start_datetime = datetime.now()
@@ -106,17 +118,6 @@ class VanqcTask(ShellTask):
                 yield f'{c} | grep -6 -e "Versions:"'
             else:
                 yield f'{c} --version'
-
-    @classmethod
-    def remove_files_and_dirs(cls, *paths):
-        cls.run_shell(
-            args=''.join([
-                'rm -{}f'.format(
-                    'r' if any([Path(str(p)).is_dir() for p in paths]) else ''
-                ),
-                *[f' {p}' for p in paths]
-            ])
-        )
 
     @staticmethod
     def generate_gatk_java_options(n_cpu=1, memory_mb=4096):
