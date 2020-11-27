@@ -18,6 +18,8 @@ Usage:
     vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--ref-ver=<str>] [--dest-dir=<path>] <data_dir_path>
         <fa_path> <seg_path>...
+        [--ref-ver=<str>] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
+        <fa_path> <vcf_path>...
     vanqc stats [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc metrics [--debug|--info] [--cpus=<int>] [--skip-cleaning]
@@ -31,6 +33,7 @@ Commands:
     snpeff                  Annotate variants using SnpEff
     funcotator              Annotate variants using GATK Funcotator
     funcotatesegments       Annotate segments using GATK FuncotateSegments
+    vep                     Annotate variants using Ensembl VEP
     stats                   Collect VCF stats using Bcftools
     metrics                 Collect variant calling metrics using GATK (Picard)
 
@@ -73,7 +76,7 @@ from ..task.gatk import (AnnotateSegWithFuncotateSegments,
                          DownloadFuncotatorDataSources)
 from ..task.picard import CollectVariantCallingMetrics
 from ..task.snpeff import AnnotateVariantsWithSnpeff, DownloadSnpeffDataSources
-from ..task.vep import DownloadEnsemblVepCache
+from ..task.vep import AnnotateVariantsWithEnsemblVep, DownloadEnsemblVepCache
 from .builder import build_luigi_tasks
 from .util import fetch_executable, load_default_dict, print_log
 
@@ -155,9 +158,10 @@ def main():
             'n_cpu': max(floor(n_cpu / n_worker), 1),
             'memory_mb': (memory_mb / n_worker), 'sh_config': sh_config
         }
-        bcftools = fetch_executable('bcftools')
         if args['normalize']:
-            kwargs = {'bcftools': bcftools, **common_kwargs}
+            kwargs = {
+                'bcftools': fetch_executable('bcftools'), **common_kwargs
+            }
             build_luigi_tasks(
                 tasks=[
                     NormalizeVcf(input_vcf_path=p, **kwargs)
@@ -167,13 +171,15 @@ def main():
             )
         elif args['snpeff']:
             kwargs = {
-                'data_src_dir_path': args['<data_dir_path>'],
+                'data_dir_path': args['<data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
                 'ref_version': args['--ref-ver'],
                 'snpeff_db': args['--snpeff-db'],
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
-                'bcftools': bcftools,
-                **{c: fetch_executable(c) for c in ['bgzip', 'tabix']},
+                **{
+                    c: fetch_executable(c)
+                    for c in ['bcftools', 'bgzip', 'tabix']
+                },
                 **common_kwargs
             }
             build_luigi_tasks(
@@ -188,7 +194,7 @@ def main():
                 'data_src_dir_path': args['<data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
                 'ref_version': args['--ref-ver'],
-                'gatk': fetch_executable('gatk'), 'bcftools': bcftools,
+                **{c: fetch_executable(c) for c in ['gatk', 'bcftools']},
                 **common_kwargs
             }
             build_luigi_tasks(
@@ -198,7 +204,7 @@ def main():
                 ],
                 workers=n_worker, log_level=log_level
             )
-        elif args['funcotator'] or args['funcotatesegments']:
+        elif args['funcotatesegments']:
             kwargs = {
                 'data_src_dir_path': args['<data_dir_path>'],
                 'ref_version': args['--ref-ver'],
@@ -212,9 +218,26 @@ def main():
                 ],
                 workers=n_worker, log_level=log_level
             )
+        elif args['vep']:
+            kwargs = {
+                'cache_dir_path': args['<data_dir_path>'],
+                'normalize_vcf': args['--normalize-vcf'],
+                **{
+                    c: fetch_executable(c)
+                    for c in ['vep', 'pigz', 'bcftools']
+                },
+                **common_kwargs
+            }
+            build_luigi_tasks(
+                tasks=[
+                    AnnotateVariantsWithEnsemblVep(input_vcf_path=p, **kwargs)
+                    for p in args['<vcf_path>']
+                ],
+                workers=n_worker, log_level=log_level
+            )
         elif args['stats']:
             kwargs = {
-                'bcftools': bcftools,
+                'bcftools': fetch_executable('bcftools'),
                 'plot_vcfstats': fetch_executable('plot-vcfstats'),
                 **{k: v for k, v in common_kwargs.items() if k != 'memory_mb'}
             }
