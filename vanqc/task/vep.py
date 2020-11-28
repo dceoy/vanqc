@@ -10,10 +10,11 @@ from .core import VanqcTask
 
 
 class DownloadEnsemblVepCache(VanqcTask):
-    src_url = luigi.ListParameter()
+    src_url = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
     extract_tar = luigi.BoolParameter(default=True)
     wget = luigi.Parameter(default='wget')
+    bgzip = luigi.Parameter(default='bgzip')
     pigz = luigi.Parameter(default='pigz')
     pbzip2 = luigi.Parameter(default='pbzip2')
     n_cpu = luigi.IntParameter(default=1)
@@ -28,7 +29,7 @@ class DownloadEnsemblVepCache(VanqcTask):
         )
 
     def output(self):
-        tar_path = self.input()[0].path
+        tar_path = list(self.input())[0].path
         return luigi.LocalTarget(
             Path(self.dest_dir_path).resolve().joinpath(
                 re.sub(r'_vep_.*$', '',  Path(tar_path).stem)

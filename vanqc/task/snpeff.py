@@ -55,7 +55,7 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
     fa_path = luigi.Parameter()
     data_dir_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
-    ref_version = luigi.Parameter(default='hg38')
+    genome_version = luigi.Parameter(default='GRCh38')
     snpeff_db = luigi.Parameter(default='')
     normalize_vcf = luigi.BoolParameter(default=False)
     norm_dir_path = luigi.Parameter(default='')
@@ -105,13 +105,10 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
             tmp_dir.joinpath(n) for n
             in ['snpeff.vcf.gz', 'snpEff_genes.txt', 'snpEff_summary.html']
         ]
-        genome_version = (
+        db_version = (
             self.snpeff_db or [
-                o.name for o in data_dir.iterdir() if (
-                    o.name.startswith(
-                        {'hg38': 'GRCh38', 'hg19': 'GRCh37'}[self.ref_version]
-                    ) and o.is_dir()
-                )
+                o.name for o in data_dir.iterdir()
+                if o.name.startswith(self.genome_version) and o.is_dir()
             ][0]
         )
         self.setup_shell(
@@ -124,7 +121,7 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
             args=(
                 f'set -eo pipefail && cd {tmp_dir} && '
                 + f'{self.snpeff} -verbose -configOption data.dir={data_dir}'
-                + f' {genome_version} {input_vcf}'
+                + f' {db_version} {input_vcf}'
                 + f' | {self.bgzip} -@ {self.n_cpu} -c > {tmp_files[0]}'
             ),
             input_files_or_dirs=[input_vcf, data_dir, tmp_dir],

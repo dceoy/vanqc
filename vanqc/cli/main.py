@@ -3,23 +3,22 @@
 Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
-    vanqc download [--debug|--info] [--cpus=<int>] [--ref-ver=<str>]
+    vanqc download [--debug|--info] [--cpus=<int>] [--hg19]
         [--snpeff|--funcotator|--vep] [--snpeff-db=<name>]
         [--snpeff-jar=<path>] [--dest-dir=<path>]
     vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--ref-ver=<str>] [--snpeff-jar=<path>] [--snpeff-db=<name>]
-        [--normalize-vcf] [--dest-dir=<path>] <data_dir_path> <fa_path>
-        <vcf_path>...
+        [--hg19] [--snpeff-jar=<path>] [--snpeff-db=<name>] [--normalize-vcf]
+        [--dest-dir=<path>] <data_dir_path> <fa_path> <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--ref-ver=<str>] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
+        [--hg19] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
         <fa_path> <vcf_path>...
     vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--ref-ver=<str>] [--dest-dir=<path>] <data_dir_path>
-        <fa_path> <seg_path>...
-        [--ref-ver=<str>] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
-        <fa_path> <vcf_path>...
+        [--hg19] [--dest-dir=<path>] <data_dir_path> <fa_path> <seg_path>...
+    vanqc vep [--debug|--info] [--cpus=<int>] [--skip-cleaning] [--hg19]
+        [--normalize-vcf] [--dest-dir=<path>] <data_dir_path> <fa_path>
+        <vcf_path>...
     vanqc stats [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc metrics [--debug|--info] [--cpus=<int>] [--skip-cleaning]
@@ -28,7 +27,7 @@ Usage:
     vanqc --version
 
 Commands:
-    download                Download and process GRCh38 resource data
+    download                Download and process annotation resource data
     normalize               Normalize VCF files using Bcftools
     snpeff                  Annotate variants using SnpEff
     funcotator              Annotate variants using GATK Funcotator
@@ -42,10 +41,9 @@ Options:
     --version               Print version and exit
     --debug, --info         Execute a command with debug|info messages
     --cpus=<int>            Limit CPU cores used
-    --ref-ver=<str>         Specify a reference version [default: hg38]
-                            {hg38, hg19}
-    --snpeff, --funcotator, --vep
-                            Specify the annotation tool to use
+    --hg19                  Use hg19 instead of hg38 (default) as a reference
+    --snpeff, --funotator, --vep
+                            Select only one of SnpEff, Funcotator, and VEP
     --snpeff-jar=<path>     Specify a path to snpEff.jar
     --snpeff-db=<name>      Specify the SnpEff database
     --dest-dir=<path>       Specify a destination directory path [default: .]
@@ -95,8 +93,13 @@ def main():
     )
     logger = logging.getLogger(__name__)
     logger.debug(f'args:{os.linesep}{args}')
-    assert args['--ref-ver'] not in {'hg38', 'hg19'}, 'invalid ref version'
     print_log(f'Start the workflow of vanqc {__version__}')
+    if args['--hg19']:
+        ucsc_hg = 'hg19'
+        ncbi_hg = 'GRCh37'
+    else:
+        ucsc_hg = 'hg38'
+        ncbi_hg = 'GRCh38'
     n_cpu = int(args['--cpus'] or cpu_count())
     memory_mb = virtual_memory().total / 1024 / 1024 / 2
     sh_config = {
@@ -115,9 +118,8 @@ def main():
         snpeff_kwargs = (
             {
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
-                'genome_version':
-                ('GRCh37' if args['--ref-ver'] == 'hg19' else 'GRCh38'),
-                'memory_mb': memory_mb, **common_kwargs
+                'genome_version': ncbi_hg, 'memory_mb': memory_mb,
+                **common_kwargs
             } if 'snpeff' in anns else None
         )
         gatk_kwargs = (
@@ -128,7 +130,7 @@ def main():
         )
         vep_kwargs = (
             {
-                'src_url': load_default_dict('urls')['ensembl_vep_cache'],
+                'src_url': load_default_dict('urls')[f'vep_{ncbi_hg}_cache'],
                 **{c: fetch_executable(c) for c in ['wget', 'pigz']},
                 'n_cpu': n_cpu, **common_kwargs
             } if 'vep' in anns else None
@@ -173,8 +175,7 @@ def main():
             kwargs = {
                 'data_dir_path': args['<data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
-                'ref_version': args['--ref-ver'],
-                'snpeff_db': args['--snpeff-db'],
+                'genome_version': ncbi_hg, 'snpeff_db': args['--snpeff-db'],
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 **{
                     c: fetch_executable(c)
@@ -193,7 +194,7 @@ def main():
             kwargs = {
                 'data_src_dir_path': args['<data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
-                'ref_version': args['--ref-ver'],
+                'ref_version': ucsc_hg,
                 **{c: fetch_executable(c) for c in ['gatk', 'bcftools']},
                 **common_kwargs
             }
@@ -207,7 +208,7 @@ def main():
         elif args['funcotatesegments']:
             kwargs = {
                 'data_src_dir_path': args['<data_dir_path>'],
-                'ref_version': args['--ref-ver'],
+                'ref_version': ucsc_hg,
                 'gatk': fetch_executable('gatk'), **common_kwargs
             }
             build_luigi_tasks(
