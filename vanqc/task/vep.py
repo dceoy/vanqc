@@ -16,7 +16,6 @@ class DownloadEnsemblVepCache(VanqcTask):
     wget = luigi.Parameter(default='wget')
     bgzip = luigi.Parameter(default='bgzip')
     pigz = luigi.Parameter(default='pigz')
-    pbzip2 = luigi.Parameter(default='pbzip2')
     n_cpu = luigi.IntParameter(default=1)
     sh_config = luigi.DictParameter(default=dict())
     priority = 10
@@ -46,7 +45,7 @@ class DownloadEnsemblVepCache(VanqcTask):
         )
         self.tar_xf(
             tar_path=tar, dest_dir_path=output_dir, pigz=self.pigz,
-            pbzip2=self.pbzip2, n_cpu=self.n_cpu, remove_tar=True
+            n_cpu=self.n_cpu, remove_tar=True
         )
 
 

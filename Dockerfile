@@ -61,7 +61,8 @@ RUN set -e \
       && make clean \
       && ./configure \
       && make \
-      && cd /usr/local/src/bcftools \
+      && make install \
+      && cd .. \
       && make clean \
       && ./configure --enable-libgsl --enable-perl-filters \
       && make \

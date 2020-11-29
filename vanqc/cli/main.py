@@ -131,7 +131,7 @@ def main():
         vep_kwargs = (
             {
                 'src_url': load_default_dict('urls')[f'vep_{ncbi_hg}_cache'],
-                **{c: fetch_executable(c) for c in ['wget', 'pigz']},
+                **{c: fetch_executable(c) for c in ['wget', 'bgzip', 'pigz']},
                 'n_cpu': n_cpu, **common_kwargs
             } if 'vep' in anns else None
         )
