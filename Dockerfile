@@ -20,11 +20,12 @@ RUN set -e \
       && apt-get -y update \
       && apt-get -y dist-upgrade \
       && apt-get -y install --no-install-recommends --no-install-suggests \
-        apt-transport-https apt-utils ca-certificates cpanminus curl g++ gcc \
-        gnupg libbz2-dev libc-dev libcurl4-gnutls-dev libfreetype6-dev \
-        libgsl-dev liblzma-dev libncurses5-dev libmysqlclient-dev libperl-dev \
-        libpng-dev libssl-dev libz-dev libxml-dom-xpath-perl \
-        libxml-parser-perl make pkg-config python r-base \
+        apt-transport-https apt-utils ca-certificates cpanminus curl file g++ \
+        gcc git gnupg libbz2-dev libc-dev libcurl4-gnutls-dev \
+        libfontconfig1-dev libfreetype6-dev libgsl-dev liblzma-dev \
+        libncurses5-dev libmysqlclient-dev libperl-dev libpng-dev libssl-dev \
+        libudunits2-dev libxml-dom-xpath-perl libxml-parser-perl libz-dev \
+        make pkg-config python r-base \
       && apt-get -y autoremove \
       && apt-get clean \
       && rm -rf /var/lib/apt/lists/*
@@ -68,32 +69,34 @@ RUN set -e \
       && make \
       && make install \
       && cd /usr/local/src/kent/src/lib \
+      && make clean \
       && export KENT_SRC=/usr/local/src/kent/src \
       && export MACHTYPE=$(uname -m) \
       && export CFLAGS="-fPIC" \
       && export MYSQLINC=`mysql_config --include | sed -e 's/^-I//g'` \
       && export MYSQLLIBS=`mysql_config --libs` \
       && echo 'CFLAGS="-fPIC"' > ../inc/localEnvironment.mk \
-      && make clean \
       && make \
       && cd ../jkOwnLib \
       && make clean \
       && make \
       && cpanm Bio::DB::BigFile Test::Warnings \
       && cd /usr/local/src/bioperl-ext/Bio/Ext/Align \
+      && make clean \
       && perl -pi -e "s|(cd libs.+)CFLAGS=\\\'|\$1CFLAGS=\\\'-fPIC |" \
         Makefile.PL \
       && perl Makefile.PL \
       && make \
       && make install \
       && cd /usr/local/src/ensembl-xs \
+      && make clean \
       && cpanm --installdeps --with-recommends . \
       && perl Makefile.PL \
       && make \
       && make install \
       && cd /usr/local/src/ensembl-vep \
       && cpanm --installdeps --with-recommends . \
-      && perl INSTALL.pl --AUTO a \
+      && perl INSTALL.pl --AUTO a --NO_HTSLIB \
       && find \
         /usr/local/src/ensembl-vep -maxdepth 1 -type f -executable \
         -exec ln -s {} /usr/local/bin \;

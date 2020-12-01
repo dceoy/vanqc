@@ -22,6 +22,7 @@ Dependent commands:
 - java
 - snpEff (`java -jar snpEff.jar`)
 - gatk
+- vep
 
 Docker image
 ------------
