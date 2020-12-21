@@ -131,16 +131,16 @@ class VanqcTask(ShellTask):
         ])
 
     @classmethod
-    def tabix_tbi(cls, tsv_path, tabix='tabix', preset='vcf'):
+    def tabix_tbi(cls, tsv_path, tabix='tabix', preset='vcf', **kwargs):
         cls.run_shell(
             args=f'set -e && {tabix} --preset {preset} {tsv_path}',
             input_files_or_dirs=tsv_path,
-            output_files_or_dirs=f'{tsv_path}.tbi'
+            output_files_or_dirs=f'{tsv_path}.tbi', **kwargs
         )
 
     @classmethod
     def tar_xf(cls, tar_path, dest_dir_path, pigz='pigz', pbzip2='pbzip2',
-               n_cpu=1, remove_tar=True):
+               n_cpu=1, remove_tar=True, **kwargs):
         cls.run_shell(
             args=(
                 'set -eo pipefail && ' + (
@@ -148,10 +148,7 @@ class VanqcTask(ShellTask):
                     else f'{pigz} -p {n_cpu}'
                 ) + f' -dc {tar_path} | tar xvf -'
             ),
-            cwd=dest_dir_path, input_files_or_dirs=tar_path,
-            output_files_or_dirs=Path(str(dest_dir_path)).joinpath(
-                Path(Path(str(tar_path)).stem).stem
-            )
+            cwd=dest_dir_path, input_files_or_dirs=tar_path, **kwargs
         )
         if remove_tar:
             cls.remove_files_and_dirs(tar_path)

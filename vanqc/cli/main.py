@@ -126,7 +126,7 @@ def main():
             {
                 **{c: fetch_executable(c) for c in ['gatk', 'pigz']},
                 'n_cpu': n_cpu, 'memory_mb': memory_mb, **common_kwargs
-            } if 'gatk' in anns else None
+            } if 'funcotator' in anns else None
         )
         vep_kwargs = (
             {

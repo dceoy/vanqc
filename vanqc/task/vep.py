@@ -44,7 +44,8 @@ class DownloadEnsemblVepCache(VanqcTask):
         if self.extract_tar:
             self.tar_xf(
                 tar_path=tar, dest_dir_path=dest_dir, pigz=self.pigz,
-                n_cpu=self.n_cpu, remove_tar=True
+                n_cpu=self.n_cpu, remove_tar=True,
+                output_files_or_dirs=output_target
             )
 
 

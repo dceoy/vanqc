@@ -13,7 +13,6 @@ class DownloadFuncotatorDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
     pigz = luigi.Parameter(default='pigz')
-    pbzip2 = luigi.Parameter(default='pbzip2')
     extract_tar = luigi.BoolParameter(default=True)
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
@@ -51,8 +50,8 @@ class DownloadFuncotatorDataSources(VanqcTask):
         self.print_log(f'Download Funcotator data sources:\t{dest_dir}')
         dir_data_dict = self._fetch_existing_funcotator_data()
         self.setup_shell(
-            run_id=dest_dir.name, commands=self.gatk, cwd=dest_dir,
-            **self.sh_config,
+            run_id=dest_dir.name, commands=[self.gatk, self.pigz],
+            cwd=dest_dir, **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
@@ -70,55 +69,22 @@ class DownloadFuncotatorDataSources(VanqcTask):
         tar_paths = list(self._fetch_existing_funcotator_data().values())
         assert bool(tar_paths), 'output files not detected'
         if self.extract_tar:
-            yield ExtractTarFiles(
-                tar_paths=tar_paths, dest_dir_path=str(dest_dir),
-                pigz=self.pigz, pbzip2=self.pbzip2, n_cpu=self.n_cpu,
-                remove_tar_files=True, sh_config=self.sh_config
-            )
-
-
-class ExtractTarFiles(VanqcTask):
-    tar_paths = luigi.ListParameter()
-    dest_dir_path = luigi.Parameter(default='.')
-    recursive = luigi.BoolParameter(default=True)
-    pigz = luigi.Parameter(default='pigz')
-    pbzip2 = luigi.Parameter(default='pbzip2')
-    n_cpu = luigi.IntParameter(default=1)
-    remove_tar_files = luigi.BoolParameter(default=False)
-    sh_config = luigi.DictParameter(default=dict())
-    priority = 10
-
-    def output(self):
-        dest_dir = Path(self.dest_dir_path).resolve()
-        return [
-            luigi.LocalTarget(dest_dir.joinpath(Path(Path(p).stem).stem))
-            for p in self.tar_paths
-        ]
-
-    def run(self):
-        dest_dir = Path(self.dest_dir_path).resolve()
-        run_id = dest_dir.name
-        self.print_log(f'Extract tar files:\t{run_id}')
-        tars = [Path(t) for t in self.tar_path]
-        output_targets = [Path(o.path) for o in self.output()]
-        self.setup_shell(
-            run_id=run_id, commands=[self.pigz, self.pbzip2], cwd=dest_dir,
-            **self.sh_config
-        )
-        for i, o in zip(tars, output_targets):
-            self.tar_xf(
-                tar_path=i, dest_dir_path=dest_dir,
-                pigz=self.pigz, pbzip2=self.pbzip2, n_cpu=self.n_cpu,
-                remove_tar=self.remove_tar_files
-            )
-            if self.recursive and o.is_dir():
-                for f in o.iterdir():
-                    if f.name.endswith(('.tar.gz', '.tar.bz2')):
-                        self.tar_xf(
-                            tar_path=i, dest_dir_path=o, pigz=self.pigz,
-                            pbzip2=self.pbzip2, n_cpu=self.n_cpu,
-                            remove_tar=self.remove_tar_files
-                        )
+            for t in tar_paths:
+                o = dest_dir.joinpath(Path(Path(t).stem).stem)
+                self.tar_xf(
+                    tar_path=t, dest_dir_path=dest_dir, pigz=self.pigz,
+                    n_cpu=self.n_cpu, remove_tar=True, output_files_or_dirs=o
+                )
+                if o.is_dir():
+                    for f in o.iterdir():
+                        if f.name.endswith('.tar.gz'):
+                            self.tar_xf(
+                                tar_path=f, dest_dir_path=o, pigz=self.pigz,
+                                n_cpu=self.n_cpu, remove_tar=True,
+                                output_files_or_dirs=o.joinpath(
+                                    Path(Path(f).stem).stem
+                                )
+                            )
 
 
 class AnnotateVariantsWithFuncotator(VanqcTask):
