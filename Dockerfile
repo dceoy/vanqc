@@ -31,33 +31,6 @@ RUN set -e \
       && rm -rf /var/lib/apt/lists/*
 
 RUN set -e \
-      && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
-      && /opt/conda/bin/conda update -n base -c defaults conda \
-      && /opt/conda/bin/conda clean -ya \
-      && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh \
-      && echo '. /opt/conda/etc/profile.d/conda.sh' >> ~/.bashrc \
-      && echo 'conda activate base' >> ~/.bashrc \
-      && rm -f /tmp/miniconda.sh
-
-RUN set -eo pipefail \
-      && sed \
-        -e 's/\(openssl\|pip\|python\|setuptools\|certifi\|wheel\|tk\|xz\|readline\|zlib\|sqlite\)=.*/\1/' \
-        -e 's/\(gatk.*.zip\)/\/opt\/gatk\/\1/' \
-        /opt/gatk/gatkcondaenv.yml > /tmp/gatkcondaenv.yml \
-      && /opt/conda/bin/conda env create -n gatk -f /tmp/gatkcondaenv.yml \
-      && /opt/conda/bin/conda clean -yaf \
-      && find /opt/conda -follow -type f -name '*.a' -delete \
-      && find /opt/conda -follow -type f -name '*.pyc' -delete
-
-RUN set -e \
-      && R -e "\
-pkgs <- c('getopt', 'optparse', 'data.table', 'gsalib', 'ggplot2', 'dplyr', 'HMM'); \
-options(repos = 'https://cran.rstudio.com/'); \
-update.packages(ask = FALSE, dependencies = TRUE); \
-install.packages(pkgs = pkgs, dependencies = TRUE, clean = TRUE); \
-sapply(pkgs, library, character.only = TRUE);"
-
-RUN set -e \
       && cd /usr/local/src/bcftools/htslib-* \
       && make clean \
       && ./configure \
@@ -96,10 +69,37 @@ RUN set -e \
       && make install \
       && cd /usr/local/src/ensembl-vep \
       && cpanm --installdeps --with-recommends . \
-      && perl INSTALL.pl --AUTO a --NO_HTSLIB \
-      && find \
-        /usr/local/src/ensembl-vep -maxdepth 1 -type f -executable \
+      && perl INSTALL.pl \
+      && find /usr/local/src/ensembl-vep -maxdepth 1 -type f -executable \
         -exec ln -s {} /usr/local/bin \;
+
+RUN set -e \
+      && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
+      && /opt/conda/bin/conda update -n base -c defaults conda \
+      && /opt/conda/bin/conda clean -ya \
+      && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh \
+      && echo '. /opt/conda/etc/profile.d/conda.sh' >> ~/.bashrc \
+      && echo 'conda activate base' >> ~/.bashrc \
+      && rm -f /tmp/miniconda.sh
+
+RUN set -eo pipefail \
+      && sed \
+        -e 's/\(openssl\|pip\|python\|setuptools\|certifi\|wheel\|tk\|xz\|readline\|zlib\|sqlite\)=.*/\1/' \
+        -e 's/\(gatk.*.zip\)/\/opt\/gatk\/\1/' \
+        /opt/gatk/gatkcondaenv.yml > /tmp/gatkcondaenv.yml \
+      && /opt/conda/bin/conda env create -n gatk -f /tmp/gatkcondaenv.yml \
+      && /opt/conda/bin/python3 -m pip install -U --no-cache-dir /tmp/vanqc \
+      && /opt/conda/bin/conda clean -yaf \
+      && find /opt/conda -follow -type f -name '*.a' -delete \
+      && find /opt/conda -follow -type f -name '*.pyc' -delete
+
+RUN set -e \
+      && R -e "\
+pkgs <- c('getopt', 'optparse', 'data.table', 'gsalib', 'ggplot2', 'dplyr', 'HMM'); \
+options(repos = 'https://cran.rstudio.com/'); \
+update.packages(ask = FALSE, dependencies = TRUE); \
+install.packages(pkgs = pkgs, dependencies = TRUE, clean = TRUE); \
+sapply(pkgs, library, character.only = TRUE);"
 
 FROM ubuntu:20.04
 
