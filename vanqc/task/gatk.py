@@ -13,7 +13,6 @@ class DownloadFuncotatorDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
     pigz = luigi.Parameter(default='pigz')
-    extract_tar = luigi.BoolParameter(default=True)
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -22,12 +21,7 @@ class DownloadFuncotatorDataSources(VanqcTask):
     def output(self):
         dir_data_dict = self._fetch_existing_funcotator_data()
         if ({'s', 'g'} <= set(dir_data_dict.keys())):
-            return [
-                luigi.LocalTarget(
-                    re.sub(r'\.tar\.gz$', '', dir_data_dict[k])
-                    if self.extract_tar else dir_data_dict[k]
-                ) for k in ['s', 'g']
-            ]
+            return [luigi.LocalTarget(dir_data_dict[k]) for k in ['s', 'g']]
         else:
             return super().output()
 
@@ -38,11 +32,9 @@ class DownloadFuncotatorDataSources(VanqcTask):
 
     def _fetch_existing_funcotator_data(self):
         return {
-            Path(o.stem).stem[-1]: str(o)
-            for o in Path(self.dest_dir_path).resolve().iterdir() if (
-                o.name.startswith('funcotator_dataSources.')
-                and o.name.endswith('.tar.gz')
-            )
+            o.name[-1]: str(o)
+            for o in Path(self.dest_dir_path).resolve().iterdir()
+            if re.search(r'^funcotator_dataSources\.v[0-9\.]+[sg]$', o.name)
         }
 
     def run(self):
@@ -68,23 +60,22 @@ class DownloadFuncotatorDataSources(VanqcTask):
         )
         tar_paths = list(self._fetch_existing_funcotator_data().values())
         assert bool(tar_paths), 'output files not detected'
-        if self.extract_tar:
-            for t in tar_paths:
-                o = dest_dir.joinpath(Path(Path(t).stem).stem)
-                self.tar_xf(
-                    tar_path=t, dest_dir_path=dest_dir, pigz=self.pigz,
-                    n_cpu=self.n_cpu, remove_tar=True, output_files_or_dirs=o
-                )
-                if o.is_dir():
-                    for f in o.iterdir():
-                        if f.name.endswith('.tar.gz'):
-                            self.tar_xf(
-                                tar_path=f, dest_dir_path=o, pigz=self.pigz,
-                                n_cpu=self.n_cpu, remove_tar=True,
-                                output_files_or_dirs=o.joinpath(
-                                    Path(Path(f).stem).stem
-                                )
+        for t in tar_paths:
+            o = dest_dir.joinpath(Path(Path(t).stem).stem)
+            self.tar_xf(
+                tar_path=t, dest_dir_path=dest_dir, pigz=self.pigz,
+                n_cpu=self.n_cpu, remove_tar=True, output_files_or_dirs=o
+            )
+            if o.is_dir():
+                for f in o.iterdir():
+                    if f.name.endswith('.tar.gz'):
+                        self.tar_xf(
+                            tar_path=f, dest_dir_path=o, pigz=self.pigz,
+                            n_cpu=self.n_cpu, remove_tar=True,
+                            output_files_or_dirs=o.joinpath(
+                                Path(Path(f).stem).stem
                             )
+                        )
 
 
 class AnnotateVariantsWithFuncotator(VanqcTask):

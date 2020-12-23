@@ -10,9 +10,10 @@ from .core import VanqcTask
 
 
 class DownloadEnsemblVepCache(VanqcTask):
-    src_url = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
-    extract_tar = luigi.BoolParameter(default=True)
+    genome_version = luigi.Parameter(default='GRCh38')
+    species = luigi.Parameter(default='homo_sapiens')
+    vep = luigi.Parameter(default='vep')
     wget = luigi.Parameter(default='wget')
     pigz = luigi.Parameter(default='pigz')
     n_cpu = luigi.IntParameter(default=1)
@@ -20,11 +21,9 @@ class DownloadEnsemblVepCache(VanqcTask):
     priority = 10
 
     def output(self):
-        tar_name = Path(self.src_url).name
         return luigi.LocalTarget(
             Path(self.dest_dir_path).resolve().joinpath('vep_cache').joinpath(
-                re.sub(r'_vep_.*$', '',  tar_name) if self.extract_tar
-                else tar_name
+                self.species
             )
         )
 
@@ -32,21 +31,28 @@ class DownloadEnsemblVepCache(VanqcTask):
         output_target = Path(self.output().path)
         self.print_log(f'Download VEP cache data:\t{output_target}')
         dest_dir = output_target.parent
-        tar = dest_dir.joinpath(Path(self.src_url).name)
+        tar = dest_dir.joinpath(output_target.name + '.tar.gz')
         self.setup_shell(
             run_id=Path(tar.stem).stem, commands=[self.wget, self.pigz],
             cwd=dest_dir, **self.sh_config
         )
         self.run_shell(
-            args=f'set -e && {self.wget} -qSL {self.src_url} -O {tar}',
+            args=(
+                f'set -e && {self.vep} --help'
+                + ' | grep -oe \'ensembl-vep \\+: \\+[0-9]\\+\''
+                + ' | grep -oe \'[0-9]\\+$\''
+                + f' | xargs -I @ {self.wget} -qSL -O {tar} '
+                + 'ftp://ftp.ensembl.org/'
+                + 'pub/release-@/variation/indexed_vep_cache/'
+                + f'homo_sapiens_vep_@_{self.genome_version}.tar.gz'
+            ),
             output_files_or_dirs=tar
         )
-        if self.extract_tar:
-            self.tar_xf(
-                tar_path=tar, dest_dir_path=dest_dir, pigz=self.pigz,
-                n_cpu=self.n_cpu, remove_tar=True,
-                output_files_or_dirs=output_target
-            )
+        self.tar_xf(
+            tar_path=tar, dest_dir_path=dest_dir, pigz=self.pigz,
+            n_cpu=self.n_cpu, remove_tar=True,
+            output_files_or_dirs=output_target
+        )
 
 
 class AnnotateVariantsWithEnsemblVep(VanqcTask):

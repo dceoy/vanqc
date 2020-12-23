@@ -3,9 +3,8 @@
 import logging
 import os
 from pathlib import Path
-from pprint import pformat
 
-import yaml
+import luigi
 
 
 def print_log(message):
@@ -29,15 +28,19 @@ def fetch_executable(cmd, ignore_errors=False):
         raise RuntimeError(f'command not found: {cmd}')
 
 
-def read_yml(path):
-    logger = logging.getLogger(__name__)
-    with open(str(path), 'r') as f:
-        d = yaml.load(f, Loader=yaml.FullLoader)
-    logger.debug('YAML data:' + os.linesep + pformat(d))
-    return d
-
-
-def load_default_dict(stem):
-    return read_yml(
-        path=Path(__file__).parent.parent.joinpath(f'static/{stem}.yml')
+def build_luigi_tasks(*args, **kwargs):
+    r = luigi.build(
+        *args,
+        **{
+            k: v for k, v in kwargs.items() if (
+                k not in {'logging_conf_file', 'hide_summary'}
+                or (k == 'logging_conf_file' and v)
+            )
+        },
+        local_scheduler=True, detailed_summary=True
     )
+    if not kwargs.get('hide_summary'):
+        print(
+            os.linesep
+            + os.linesep.join(['Execution summary:', r.summary_text, str(r)])
+        )

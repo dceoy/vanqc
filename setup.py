@@ -18,9 +18,7 @@ setup(
     url='git@github.com:dceoy/vanqc.git',
     packages=find_packages(),
     include_package_data=True,
-    install_requires=[
-        'docopt', 'jinja2', 'luigi', 'pip', 'psutil', 'pyyaml', 'shoper'
-    ],
+    install_requires=['docopt', 'jinja2', 'luigi', 'pip', 'psutil', 'shoper'],
     entry_points={
         'console_scripts': ['vanqc=vanqc.cli.main:main']
     },

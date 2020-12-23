@@ -75,8 +75,7 @@ from ..task.gatk import (AnnotateSegWithFuncotateSegments,
 from ..task.picard import CollectVariantCallingMetrics
 from ..task.snpeff import AnnotateVariantsWithSnpeff, DownloadSnpeffDataSources
 from ..task.vep import AnnotateVariantsWithEnsemblVep, DownloadEnsemblVepCache
-from .builder import build_luigi_tasks
-from .util import fetch_executable, load_default_dict, print_log
+from .util import build_luigi_tasks, fetch_executable, print_log
 
 
 def main():
@@ -115,37 +114,36 @@ def main():
         common_kwargs = {
             'dest_dir_path': args['--dest-dir'], 'sh_config': sh_config
         }
-        snpeff_kwargs = (
-            {
-                'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
-                'genome_version': ncbi_hg, 'memory_mb': memory_mb,
-                **common_kwargs
-            } if 'snpeff' in anns else None
-        )
-        gatk_kwargs = (
-            {
-                **{c: fetch_executable(c) for c in ['gatk', 'pigz']},
-                'n_cpu': n_cpu, 'memory_mb': memory_mb, **common_kwargs
-            } if 'funcotator' in anns else None
-        )
-        vep_kwargs = (
-            {
-                'src_url': load_default_dict('urls')[f'vep_{ncbi_hg}_cache'],
-                **{c: fetch_executable(c) for c in ['wget', 'pigz']},
-                'n_cpu': n_cpu, **common_kwargs
-            } if 'vep' in anns else None
-        )
         build_luigi_tasks(
             tasks=(
                 (
-                    [DownloadSnpeffDataSources(**snpeff_kwargs)]
-                    if snpeff_kwargs else list()
+                    [
+                        DownloadSnpeffDataSources(
+                            snpeff=_fetch_snpeff_sh(
+                                jar_path=args['--snpeff-jar']
+                            ),
+                            genome_version=ncbi_hg, memory_mb=memory_mb,
+                            **common_kwargs
+                        )
+                    ] if 'snpeff' in anns else list()
                 ) + (
-                    [DownloadFuncotatorDataSources(**gatk_kwargs)]
-                    if gatk_kwargs else list()
+                    [
+                        DownloadFuncotatorDataSources(
+                            gatk=fetch_executable('gatk'),
+                            pigz=fetch_executable('pigz'), n_cpu=n_cpu,
+                            memory_mb=memory_mb, **common_kwargs
+                        )
+                    ] if 'funcotator' in anns else list()
                 ) + (
-                    [DownloadEnsemblVepCache(**vep_kwargs)]
-                    if vep_kwargs else list()
+                    [
+                        DownloadEnsemblVepCache(
+                            genome_version=ncbi_hg,
+                            vep=fetch_executable('vep'),
+                            wget=fetch_executable('wget'),
+                            pigz=fetch_executable('pigz'), n_cpu=n_cpu,
+                            **common_kwargs
+                        )
+                    ] if 'vep' in anns else list()
                 )
             ),
             log_level=log_level
