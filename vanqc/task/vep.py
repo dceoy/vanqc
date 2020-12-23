@@ -22,7 +22,7 @@ class DownloadEnsemblVepCache(VanqcTask):
     def output(self):
         tar_name = Path(self.src_url).name
         return luigi.LocalTarget(
-            Path(self.dest_dir_path).resolve().joinpath(
+            Path(self.dest_dir_path).resolve().joinpath('vep_cache').joinpath(
                 re.sub(r'_vep_.*$', '',  tar_name) if self.extract_tar
                 else tar_name
             )
