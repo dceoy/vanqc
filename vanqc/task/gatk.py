@@ -19,28 +19,24 @@ class DownloadFuncotatorDataSources(VanqcTask):
     priority = 10
 
     def output(self):
-        dir_data_dict = self._fetch_existing_funcotator_data()
+        dir_data_dict = self._fetch_existing_data_dirs()
         if ({'s', 'g'} <= set(dir_data_dict.keys())):
             return [luigi.LocalTarget(dir_data_dict[k]) for k in ['s', 'g']]
         else:
             return super().output()
 
     def complete(self):
-        return bool(
-            {'s', 'g'} <= set(self._fetch_existing_funcotator_data().keys())
-        )
+        return bool({'s', 'g'} <= set(self._fetch_existing_data_dirs().keys()))
 
-    def _fetch_existing_funcotator_data(self):
+    def _fetch_existing_data_dirs(self):
         return {
-            o.name[-1]: str(o)
-            for o in Path(self.dest_dir_path).resolve().iterdir()
+            o.name[-1]: o for o in Path(self.dest_dir_path).resolve().iterdir()
             if re.search(r'^funcotator_dataSources\.v[0-9\.]+[sg]$', o.name)
         }
 
     def run(self):
         dest_dir = Path(self.dest_dir_path).resolve()
         self.print_log(f'Download Funcotator data sources:\t{dest_dir}')
-        dir_data_dict = self._fetch_existing_funcotator_data()
         self.setup_shell(
             run_id=dest_dir.name, commands=[self.gatk, self.pigz],
             cwd=dest_dir, **self.sh_config,
@@ -50,32 +46,34 @@ class DownloadFuncotatorDataSources(VanqcTask):
                 )
             }
         )
-        self.run_shell(
-            args=[
-                (
+        tar_dict = {
+            k: dest_dir.joinpath(f'funcotator_{k}_data_sources.tar.gz')
+            for k in ['germline', 'somatic']
+            if k[0] not in self._fetch_existing_data_dirs()
+        }
+        for k, v in tar_dict.items():
+            self.run_shell(
+                args=(
                     f'set -e && {self.gatk} FuncotatorDataSourceDownloader'
-                    + f' --validate-integrity --{k}'
-                ) for k in ['germline', 'somatic'] if k[0] not in dir_data_dict
-            ]
-        )
-        tar_paths = list(self._fetch_existing_funcotator_data().values())
-        assert bool(tar_paths), 'output files not detected'
-        for t in tar_paths:
-            o = dest_dir.joinpath(Path(Path(t).stem).stem)
-            self.tar_xf(
-                tar_path=t, dest_dir_path=dest_dir, pigz=self.pigz,
-                n_cpu=self.n_cpu, remove_tar=True, output_files_or_dirs=o
+                    + f' --validate-integrity --{k} --output {v}'
+                ),
+                output_files_or_dirs=v
             )
-            if o.is_dir():
-                for f in o.iterdir():
-                    if f.name.endswith('.tar.gz'):
-                        self.tar_xf(
-                            tar_path=f, dest_dir_path=o, pigz=self.pigz,
-                            n_cpu=self.n_cpu, remove_tar=True,
-                            output_files_or_dirs=o.joinpath(
-                                Path(Path(f).stem).stem
-                            )
+            self.tar_xf(
+                tar_path=v, dest_dir_path=dest_dir, pigz=self.pigz,
+                n_cpu=self.n_cpu, remove_tar=True
+            )
+            src_dir = self._fetch_existing_data_dirs().get(k[0])
+            assert (src_dir and src_dir.is_dir()), f'{k} data not found'
+            for f in src_dir.iterdir():
+                if f.name.endswith('.tar.gz'):
+                    self.tar_xf(
+                        tar_path=f, dest_dir_path=src_dir, pigz=self.pigz,
+                        n_cpu=self.n_cpu, remove_tar=True,
+                        output_files_or_dirs=src_dir.joinpath(
+                            Path(Path(f).stem).stem
                         )
+                    )
 
 
 class AnnotateVariantsWithFuncotator(VanqcTask):
