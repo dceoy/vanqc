@@ -139,16 +139,10 @@ class VanqcTask(ShellTask):
         )
 
     @classmethod
-    def tar_xf(cls, tar_path, dest_dir_path, pigz='pigz', pbzip2='pbzip2',
-               n_cpu=1, remove_tar=True, **kwargs):
+    def tar_xf(cls, tar_path, dest_dir_path, remove_tar=True, **kwargs):
         cls.run_shell(
-            args=(
-                'set -eo pipefail && ' + (
-                    f'{pbzip2} -p{n_cpu}' if str(tar_path).endswith('.bz2')
-                    else f'{pigz} -p {n_cpu}'
-                ) + f' -dc {tar_path} | tar xvf -'
-            ),
-            cwd=dest_dir_path, input_files_or_dirs=tar_path, **kwargs
+            args=f'set -e && tar xvf {tar_path}', cwd=dest_dir_path,
+            input_files_or_dirs=tar_path, **kwargs
         )
         if remove_tar:
             cls.remove_files_and_dirs(tar_path)

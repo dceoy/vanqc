@@ -12,7 +12,6 @@ from .core import VanqcTask
 class DownloadFuncotatorDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
-    pigz = luigi.Parameter(default='pigz')
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -38,8 +37,8 @@ class DownloadFuncotatorDataSources(VanqcTask):
         dest_dir = Path(self.dest_dir_path).resolve()
         self.print_log(f'Download Funcotator data sources:\t{dest_dir}')
         self.setup_shell(
-            run_id=dest_dir.name, commands=[self.gatk, self.pigz],
-            cwd=dest_dir, **self.sh_config,
+            run_id=dest_dir.name, commands=self.gatk, cwd=dest_dir,
+            **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
                     n_cpu=self.n_cpu, memory_mb=self.memory_mb
@@ -55,21 +54,18 @@ class DownloadFuncotatorDataSources(VanqcTask):
             self.run_shell(
                 args=(
                     f'set -e && {self.gatk} FuncotatorDataSourceDownloader'
-                    + f' --validate-integrity --{k} --output {v}'
+                    + ' --validate-integrity --extract-after-download'
+                    + f' --{k} --output {v}'
                 ),
                 output_files_or_dirs=v
             )
-            self.tar_xf(
-                tar_path=v, dest_dir_path=dest_dir, pigz=self.pigz,
-                n_cpu=self.n_cpu, remove_tar=True
-            )
             src_dir = self._fetch_existing_data_dirs().get(k[0])
             assert (src_dir and src_dir.is_dir()), f'{k} data not found'
+            self.remove_files_and_dirs(v)
             for f in src_dir.iterdir():
                 if f.name.endswith('.tar.gz'):
                     self.tar_xf(
-                        tar_path=f, dest_dir_path=src_dir, pigz=self.pigz,
-                        n_cpu=self.n_cpu, remove_tar=True,
+                        tar_path=f, dest_dir_path=src_dir, remove_tar=True,
                         output_files_or_dirs=src_dir.joinpath(
                             Path(Path(f).stem).stem
                         )
@@ -78,8 +74,8 @@ class DownloadFuncotatorDataSources(VanqcTask):
 
 class AnnotateVariantsWithFuncotator(VanqcTask):
     input_vcf_path = luigi.Parameter()
-    data_src_dir_path = luigi.Parameter()
     fa_path = luigi.Parameter()
+    data_src_dir_path = luigi.Parameter()
     ref_version = luigi.Parameter(default='hg38')
     dest_dir_path = luigi.Parameter(default='.')
     normalize_vcf = luigi.BoolParameter(default=False)
@@ -156,8 +152,8 @@ class AnnotateVariantsWithFuncotator(VanqcTask):
 
 class AnnotateSegWithFuncotateSegments(VanqcTask):
     input_seg_path = luigi.Parameter()
-    data_src_dir_path = luigi.Parameter()
     fa_path = luigi.Parameter()
+    data_src_dir_path = luigi.Parameter()
     ref_version = luigi.Parameter(default='hg38')
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')

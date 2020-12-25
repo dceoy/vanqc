@@ -4,8 +4,8 @@ Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
     vanqc download [--debug|--info] [--cpus=<int>] [--hg19]
-        [--snpeff|--funcotator|--vep] [--snpeff-db=<name>]
-        [--snpeff-jar=<path>] [--dest-dir=<path>]
+        [--snpeff|--funcotator|--vep] [--snpeff-jar=<path>]
+        [--snpeff-db=<name>] [--http] [--dest-dir=<path>]
     vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
@@ -46,6 +46,7 @@ Options:
                             Select only one of SnpEff, Funcotator, and VEP
     --snpeff-jar=<path>     Specify a path to snpEff.jar
     --snpeff-db=<name>      Specify the SnpEff database
+    --http                  Use HTTP instead of FTP (for VEP)
     --dest-dir=<path>       Specify a destination directory path [default: .]
     --skip-cleaning         Skip incomlete file removal when a task fails
     --normalize-vcf         Normalize VCF files
@@ -129,8 +130,7 @@ def main():
                 ) + (
                     [
                         DownloadFuncotatorDataSources(
-                            gatk=fetch_executable('gatk'),
-                            pigz=fetch_executable('pigz'), n_cpu=n_cpu,
+                            gatk=fetch_executable('gatk'), n_cpu=n_cpu,
                             memory_mb=memory_mb, **common_kwargs
                         )
                     ] if 'funcotator' in anns else list()
@@ -140,8 +140,7 @@ def main():
                             genome_version=ncbi_hg,
                             vep=fetch_executable('vep'),
                             wget=fetch_executable('wget'),
-                            pigz=fetch_executable('pigz'), n_cpu=n_cpu,
-                            **common_kwargs
+                            avoid_ftp=args['--http'], **common_kwargs
                         )
                     ] if 'vep' in anns else list()
                 )
