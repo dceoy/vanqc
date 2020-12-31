@@ -15,7 +15,7 @@ setup(
     description='Variant Annotator and QC Checker for Human Genome Sequencing',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='git@github.com:dceoy/vanqc.git',
+    url='https://github.com/dceoy/vanqc.git',
     packages=find_packages(),
     include_package_data=True,
     install_requires=['docopt', 'jinja2', 'luigi', 'pip', 'psutil', 'shoper'],
