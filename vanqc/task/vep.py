@@ -56,9 +56,8 @@ class DownloadEnsemblVepCache(VanqcTask):
 class AnnotateVariantsWithEnsemblVep(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
-    cache_dir_path = luigi.Parameter()
+    cache_data_dir_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
-    species = luigi.Parameter(default='homo_sapiens')
     normalize_vcf = luigi.BoolParameter(default=False)
     norm_dir_path = luigi.Parameter(default='')
     bcftools = luigi.Parameter(default='bcftools')
@@ -99,7 +98,7 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
         ).resolve()
         run_id = Path(input_vcf.stem).stem
         self.print_log(f'Annotate variants with Ensembl VEP:\t{run_id}')
-        cache_dir = Path(self.cache_dir_path).resolve()
+        cache_data_dir = Path(self.cache_data_dir_path).resolve()
         output_txt = Path(self.output().path)
         dest_dir = output_txt.parent
         tmp_txt = dest_dir.joinpath(output_txt.stem)
@@ -110,12 +109,12 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
         self.run_shell(
             args=(
                 f'set -e && {self.ensembl_vep}'
-                + f' --cache --species {self.species}'
-                + f' --dir {cache_dir}'
+                + f' --cache --species {cache_data_dir.name}'
+                + f' --dir {cache_data_dir.parent}'
                 + f' --input_file {input_vcf}'
                 + f' --output_file {tmp_txt}'
             ),
-            input_files_or_dirs=[input_vcf, cache_dir],
+            input_files_or_dirs=[input_vcf, cache_data_dir],
             output_files_or_dirs=tmp_txt
         )
         self.run_shell(

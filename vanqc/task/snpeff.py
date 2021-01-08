@@ -53,10 +53,8 @@ class DownloadSnpeffDataSources(VanqcTask):
 class AnnotateVariantsWithSnpeff(VanqcTask):
     input_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
-    data_dir_path = luigi.Parameter()
+    db_data_dir_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
-    genome_version = luigi.Parameter(default='GRCh38')
-    snpeff_db = luigi.Parameter(default='')
     normalize_vcf = luigi.BoolParameter(default=False)
     norm_dir_path = luigi.Parameter(default='')
     bcftools = luigi.Parameter(default='bcftools')
@@ -97,7 +95,7 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
         ).resolve()
         run_id = Path(input_vcf.stem).stem
         self.print_log(f'Annotate variants with SnpEff:\t{run_id}')
-        data_dir = Path(self.data_dir_path).resolve()
+        db_data_dir = Path(self.db_data_dir_path).resolve()
         output_vcf = Path(self.output()[0].path)
         dest_dir = output_vcf.parent
         tmp_dir = dest_dir.joinpath(run_id)
@@ -105,12 +103,6 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
             tmp_dir.joinpath(n) for n
             in ['snpeff.vcf.gz', 'snpEff_genes.txt', 'snpEff_summary.html']
         ]
-        db_version = (
-            self.snpeff_db or [
-                o.name for o in data_dir.iterdir()
-                if o.name.startswith(self.genome_version) and o.is_dir()
-            ][0]
-        )
         self.setup_shell(
             run_id=run_id, commands=[self.snpeff, self.bgzip, self.tabix],
             cwd=dest_dir, **self.sh_config,
@@ -120,11 +112,12 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
         self.run_shell(
             args=(
                 f'set -eo pipefail && cd {tmp_dir} && '
-                + f'{self.snpeff} -verbose -configOption data.dir={data_dir}'
-                + f' {db_version} {input_vcf}'
+                + f'{self.snpeff} -verbose'
+                + f' -configOption data.dir={db_data_dir.parent}'
+                + f' {db_data_dir.name} {input_vcf}'
                 + f' | {self.bgzip} -@ {self.n_cpu} -c > {tmp_files[0]}'
             ),
-            input_files_or_dirs=[input_vcf, data_dir, tmp_dir],
+            input_files_or_dirs=[input_vcf, db_data_dir, tmp_dir],
             output_files_or_dirs=[tmp_files[0], tmp_dir]
         )
         for t in tmp_files:

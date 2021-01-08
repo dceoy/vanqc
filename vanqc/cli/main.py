@@ -9,15 +9,16 @@ Usage:
     vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--snpeff-jar=<path>] [--snpeff-db=<name>] [--normalize-vcf]
-        [--dest-dir=<path>] <data_dir_path> <fa_path> <vcf_path>...
+        [--hg19] [--snpeff-jar=<path>] [--normalize-vcf] [--dest-dir=<path>]
+        <db_data_dir_path> <fa_path> <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--normalize-vcf] [--dest-dir=<path>] <data_dir_path>
+        [--hg19] [--normalize-vcf] [--dest-dir=<path>] <data_src_dir_path>
         <fa_path> <vcf_path>...
     vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--dest-dir=<path>] <data_dir_path> <fa_path> <seg_path>...
+        [--hg19] [--dest-dir=<path>] <data_src_dir_path> <fa_path>
+        <seg_path>...
     vanqc vep [--debug|--info] [--cpus=<int>] [--skip-cleaning] [--hg19]
-        [--normalize-vcf] [--dest-dir=<path>] <data_dir_path> <fa_path>
+        [--normalize-vcf] [--dest-dir=<path>] <cache_data_dir_path> <fa_path>
         <vcf_path>...
     vanqc stats [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
@@ -45,7 +46,6 @@ Options:
     --snpeff, --funotator, --vep
                             Select only one of SnpEff, Funcotator, and VEP
     --snpeff-jar=<path>     Specify a path to snpEff.jar
-    --snpeff-db=<name>      Specify the SnpEff database
     --http                  Use HTTP instead of FTP (for VEP)
     --dest-dir=<path>       Specify a destination directory path [default: .]
     --skip-cleaning         Skip incomlete file removal when a task fails
@@ -55,7 +55,12 @@ Args:
     <fa_path>               Path to an reference FASTA file
                             (The index and sequence dictionary are required.)
     <vcf_path>              Path to a VCF file
-    <data_dir_path>         Path to a data source directory
+    <db_data_dir_path>      Path to a SnpEff database directory
+                            (e.g., ./snpeff_data/GRCh38.86)
+    <data_src_dir_path>     Path to a Funcotator data source directory
+                            (e.g., ./funcotator_dataSources.v1.7.20200521s)
+    <cache_data_dir_path>   Path to a VEP cache data directory
+                            (e.g., ./vep_cache/homo_sapiens)
     <seg_path>              Path to a segment TSV files
     <dbsnp_vcf_path>        Path to a reference dbSNP file
 """
@@ -170,9 +175,9 @@ def main():
             )
         elif args['snpeff']:
             kwargs = {
-                'data_dir_path': args['<data_dir_path>'],
+                'db_data_dir_path': args['<db_data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
-                'genome_version': ncbi_hg, 'snpeff_db': args['--snpeff-db'],
+                'genome_version': ncbi_hg,
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 **{
                     c: fetch_executable(c)
@@ -189,7 +194,7 @@ def main():
             )
         elif args['funcotator']:
             kwargs = {
-                'data_src_dir_path': args['<data_dir_path>'],
+                'data_src_dir_path': args['<data_src_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
                 'ref_version': ucsc_hg,
                 **{c: fetch_executable(c) for c in ['gatk', 'bcftools']},
@@ -204,7 +209,7 @@ def main():
             )
         elif args['funcotatesegments']:
             kwargs = {
-                'data_src_dir_path': args['<data_dir_path>'],
+                'data_src_dir_path': args['<data_src_dir_path>'],
                 'ref_version': ucsc_hg,
                 'gatk': fetch_executable('gatk'), **common_kwargs
             }
@@ -218,7 +223,7 @@ def main():
             )
         elif args['vep']:
             kwargs = {
-                'cache_dir_path': args['<data_dir_path>'],
+                'cache_data_dir_path': args['<cache_data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
                 **{
                     c: fetch_executable(c)
