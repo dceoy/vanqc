@@ -177,7 +177,6 @@ def main():
             kwargs = {
                 'db_data_dir_path': args['<db_data_dir_path>'],
                 'normalize_vcf': args['--normalize-vcf'],
-                'genome_version': ncbi_hg,
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 **{
                     c: fetch_executable(c)
