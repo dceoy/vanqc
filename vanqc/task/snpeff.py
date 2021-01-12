@@ -90,11 +90,12 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
         return [luigi.LocalTarget(f'{output_vcf}{s}') for s in ['', '.tbi']]
 
     def run(self):
-        input_vcf = Path(
+        target_vcf = Path(
             self.input()[0].path if self.normalize_vcf else self.input_vcf_path
-        ).resolve()
-        run_id = Path(input_vcf.stem).stem
+        )
+        run_id = Path(target_vcf.stem).stem
         self.print_log(f'Annotate variants with SnpEff:\t{run_id}')
+        input_vcf = target_vcf.resolve()
         db_data_dir = Path(self.db_data_dir_path).resolve()
         output_vcf = Path(self.output()[0].path)
         dest_dir = output_vcf.parent

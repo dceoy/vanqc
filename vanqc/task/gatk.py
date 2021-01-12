@@ -117,11 +117,12 @@ class AnnotateVariantsWithFuncotator(VanqcTask):
         ]
 
     def run(self):
-        input_vcf = Path(
+        target_vcf = Path(
             self.input()[0].path if self.normalize_vcf else self.input_vcf_path
-        ).resolve()
-        run_id = Path(input_vcf.stem).stem
+        )
+        run_id = Path(target_vcf.stem).stem
         self.print_log(f'Annotate variants with Funcotator:\t{run_id}')
+        input_vcf = target_vcf.resolve()
         fa = Path(self.fa_path).resolve()
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')
         data_src_dir = Path(self.data_src_dir_path).resolve()
@@ -170,9 +171,10 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
         )
 
     def run(self):
-        input_tsv = Path(self.input_seg_path).resolve()
-        run_id = input_tsv.stem
+        target_tsv = Path(self.input_seg_path)
+        run_id = target_tsv.stem
         self.print_log(f'Annotate segments with FuncotateSegments:\t{run_id}')
+        input_tsv = target_tsv.resolve()
         data_src_dir = Path(self.data_src_dir_path).resolve()
         fa = Path(self.fa_path).resolve()
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')

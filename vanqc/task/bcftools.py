@@ -26,9 +26,10 @@ class NormalizeVcf(VanqcTask):
         return [luigi.LocalTarget(f'{output_vcf}{s}') for s in ['', '.tbi']]
 
     def run(self):
-        input_vcf = Path(self.input_vcf_path).resolve()
-        run_id = Path(input_vcf.stem).stem
+        target_vcf = Path(self.input_vcf_path)
+        run_id = Path(target_vcf.stem).stem
         self.print_log(f'Normalize VCF:\t{run_id}')
+        input_vcf = target_vcf.resolve()
         fa = Path(self.fa_path).resolve()
         output_vcf = Path(self.output()[0].path)
         self.setup_shell(
@@ -82,9 +83,10 @@ class CollectVcfStats(VanqcTask):
         ]
 
     def run(self):
-        input_vcf = Path(self.input_vcf_path).resolve()
-        run_id = Path(input_vcf.stem).stem
+        target_vcf = Path(self.input_vcf_path)
+        run_id = Path(target_vcf.stem).stem
         self.print_log(f'Collect VCF stats:\t{run_id}')
+        input_vcf = target_vcf.resolve()
         fa = Path(self.fa_path).resolve()
         output_txt = Path(self.output()[0].path)
         plot_dir = Path(self.output()[1].path)

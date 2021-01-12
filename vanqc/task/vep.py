@@ -93,11 +93,12 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
         )
 
     def run(self):
-        input_vcf = Path(
+        target_vcf = Path(
             self.input()[0].path if self.normalize_vcf else self.input_vcf_path
-        ).resolve()
-        run_id = Path(input_vcf.stem).stem
+        )
+        run_id = Path(target_vcf.stem).stem
         self.print_log(f'Annotate variants with Ensembl VEP:\t{run_id}')
+        input_vcf = target_vcf.resolve()
         cache_data_dir = Path(self.cache_data_dir_path).resolve()
         output_txt = Path(self.output().path)
         dest_dir = output_txt.parent
