@@ -90,7 +90,10 @@ COPY --from=builder /usr/local /usr/local
 COPY --from=builder /opt /opt
 
 RUN set -e \
-      && ln -sf bash /bin/sh
+      && ln -sf bash /bin/sh \
+      && echo '. /opt/conda/etc/profile.d/conda.sh' >> /etc/profile \
+      && echo 'conda activate base' >> /etc/profile \
+      && echo 'source /opt/gatk/gatkenv.rc' >> /etc/profile
 
 RUN set -e \
       && apt-get -y update \
@@ -99,7 +102,7 @@ RUN set -e \
         apt-transport-https apt-utils ca-certificates curl gnupg \
         libcurl3-gnutls libgsl23 libgkl-jni libncurses5 libmysqlclient21 \
         libxml-dom-xpath-perl libxml-parser-perl openjdk-8-jre pbzip2 perl \
-        pigz python r-base wget
+        pigz python wget
 
 RUN set -eo pipefail \
       && echo "deb http://packages.cloud.google.com/apt cloud-sdk-bionic main" \
