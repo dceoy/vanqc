@@ -71,6 +71,7 @@ from math import floor
 from pathlib import Path
 
 from docopt import docopt
+from ftarc.cli.util import build_luigi_tasks, fetch_executable, print_log
 from psutil import cpu_count, virtual_memory
 
 from .. import __version__
@@ -81,7 +82,6 @@ from ..task.gatk import (AnnotateSegWithFuncotateSegments,
 from ..task.picard import CollectVariantCallingMetrics
 from ..task.snpeff import AnnotateVariantsWithSnpeff, DownloadSnpeffDataSources
 from ..task.vep import AnnotateVariantsWithEnsemblVep, DownloadEnsemblVepCache
-from .util import build_luigi_tasks, fetch_executable, print_log
 
 
 def main():
