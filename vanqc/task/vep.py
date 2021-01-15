@@ -104,12 +104,12 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
         dest_dir = output_txt.parent
         tmp_txt = dest_dir.joinpath(output_txt.stem)
         self.setup_shell(
-            run_id=run_id, commands=[self.ensembl_vep, self.pigz],
-            cwd=dest_dir, **self.sh_config
+            run_id=run_id, commands=[self.vep, self.pigz], cwd=dest_dir,
+            **self.sh_config
         )
         self.run_shell(
             args=(
-                f'set -e && {self.ensembl_vep}'
+                f'set -e && {self.vep}'
                 + f' --cache --species {cache_data_dir.name}'
                 + f' --dir {cache_data_dir.parent}'
                 + f' --input_file {input_vcf}'
