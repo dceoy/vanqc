@@ -19,12 +19,16 @@ class CollectVariantCallingMetrics(VanqcTask):
     priority = 10
 
     def output(self):
-        return luigi.LocalTarget(
+        output_path_prefix = str(
             Path(self.dest_dir_path).resolve().joinpath(
                 Path(Path(self.input_vcf_path).stem).stem
-                + '.CollectVariantCallingMetrics.txt'
             )
         )
+        return [
+            luigi.LocalTarget(
+                f'{output_path_prefix}.variant_calling_{s}_metrics.txt'
+            ) for s in ['summary', 'detail']
+        ]
 
     def run(self):
         target_vcf = Path(self.input_vcf_path)
@@ -34,9 +38,11 @@ class CollectVariantCallingMetrics(VanqcTask):
         dbsnp_vcf = Path(self.dbsnp_vcf_path).resolve()
         fa = Path(self.fa_path).resolve()
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')
-        output_txt = Path(self.output().path)
+        output_txts = [Path(o.path) for o in self.output()]
+        dest_dir = output_txts[0].parent
+        tmp_txts = [dest_dir.joinpath(t.stem) for t in output_txts]
         self.setup_shell(
-            run_id=run_id, commands=self.picard, cwd=output_txt.parent,
+            run_id=run_id, commands=self.picard, cwd=dest_dir,
             **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(
@@ -49,12 +55,16 @@ class CollectVariantCallingMetrics(VanqcTask):
                 f'set -e && {self.picard} CollectVariantCallingMetrics'
                 + f' --INPUT {input_vcf}'
                 + f' --DBSNP {dbsnp_vcf}'
-                + F' --REFERENCE_SEQUENCE {fa}'
+                + f' --REFERENCE_SEQUENCE {fa}'
                 + f' --SEQUENCE_DICTIONARY {fa_dict}'
-                + F' --OUTPUT {output_txt}'
+                + ' --OUTPUT {}'.format(dest_dir.joinpath(tmp_txts[0].stem))
             ),
             input_files_or_dirs=[input_vcf, fa, f'{fa}.fai', fa_dict],
-            output_files_or_dirs=output_txt
+            output_files_or_dirs=tmp_txts
+        )
+        self.run_shell(
+            args=[f'mv {t} {o}' for t, o in zip(tmp_txts, output_txts)],
+            input_files_or_dirs=tmp_txts, output_files_or_dirs=output_txts
         )
 
 
