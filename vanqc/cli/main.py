@@ -9,16 +9,16 @@ Usage:
     vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--snpeff-jar=<path>] [--normalize-vcf] [--dest-dir=<path>]
+        [--hg19] [--snpeff-jar=<path>] [--normalize] [--dest-dir=<path>]
         <db_data_dir_path> <fa_path> <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--normalize-vcf] [--dest-dir=<path>] <data_src_dir_path>
+        [--hg19] [--normalize] [--dest-dir=<path>] <data_src_dir_path>
         <fa_path> <vcf_path>...
     vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--hg19] [--dest-dir=<path>] <data_src_dir_path> <fa_path>
         <seg_path>...
     vanqc vep [--debug|--info] [--cpus=<int>] [--skip-cleaning] [--hg19]
-        [--normalize-vcf] [--dest-dir=<path>] <cache_data_dir_path> <fa_path>
+        [--normalize] [--dest-dir=<path>] <cache_data_dir_path> <fa_path>
         <vcf_path>...
     vanqc stats [--debug|--info] [--cpus=<int>] [--skip-cleaning]
         [--dest-dir=<path>] <fa_path> <vcf_path>...
@@ -49,7 +49,7 @@ Options:
     --http                  Use HTTP instead of FTP (for VEP)
     --dest-dir=<path>       Specify a destination directory path [default: .]
     --skip-cleaning         Skip incomlete file removal when a task fails
-    --normalize-vcf         Normalize VCF files
+    --normalize             Normalize VCF files
 
 Args:
     <fa_path>               Path to an reference FASTA file
@@ -108,7 +108,7 @@ def main():
     n_cpu = int(args['--cpus'] or cpu_count())
     memory_mb = virtual_memory().total / 1024 / 1024 / 2
     sh_config = {
-        'log_dir_path': None,
+        'log_dir_path': args['--dest-dir'],
         'remove_if_failed': (not args['--skip-cleaning']), 'quiet': False,
         'executable': fetch_executable('bash')
     }
@@ -176,7 +176,7 @@ def main():
         elif args['snpeff']:
             kwargs = {
                 'db_data_dir_path': args['<db_data_dir_path>'],
-                'normalize_vcf': args['--normalize-vcf'],
+                'normalize_vcf': args['--normalize'],
                 'snpeff': _fetch_snpeff_sh(jar_path=args['--snpeff-jar']),
                 **{
                     c: fetch_executable(c)
@@ -194,7 +194,7 @@ def main():
         elif args['funcotator']:
             kwargs = {
                 'data_src_dir_path': args['<data_src_dir_path>'],
-                'normalize_vcf': args['--normalize-vcf'],
+                'normalize_vcf': args['--normalize'],
                 'ref_version': ucsc_hg,
                 **{c: fetch_executable(c) for c in ['gatk', 'bcftools']},
                 **common_kwargs
@@ -223,7 +223,7 @@ def main():
         elif args['vep']:
             kwargs = {
                 'cache_data_dir_path': args['<cache_data_dir_path>'],
-                'normalize_vcf': args['--normalize-vcf'],
+                'normalize_vcf': args['--normalize'],
                 **{
                     c: fetch_executable(c)
                     for c in ['vep', 'pigz', 'bcftools']

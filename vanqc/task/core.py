@@ -25,10 +25,6 @@ class VanqcTask(ShellTask):
     @staticmethod
     def generate_gatk_java_options(n_cpu=1, memory_mb=4096):
         return ' '.join([
-            '-Dsamjdk.compression_level=5',
-            '-Dsamjdk.use_async_io_read_samtools=true',
-            '-Dsamjdk.use_async_io_write_samtools=true',
-            '-Dsamjdk.use_async_io_write_tribble=false',
             '-Xmx{}m'.format(int(memory_mb)), '-XX:+UseParallelGC',
             '-XX:ParallelGCThreads={}'.format(int(n_cpu))
         ])

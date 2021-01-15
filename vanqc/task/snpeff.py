@@ -112,8 +112,7 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
         self.run_shell(args=f'mkdir {tmp_dir}', output_files_or_dirs=tmp_dir)
         self.run_shell(
             args=(
-                f'set -eo pipefail && cd {tmp_dir} && '
-                + f'{self.snpeff} -verbose'
+                f'set -eo pipefail && cd {tmp_dir} && {self.snpeff} ann'
                 + f' -configOption data.dir={db_data_dir.parent}'
                 + f' {db_data_dir.name} {input_vcf}'
                 + f' | {self.bgzip} -@ {self.n_cpu} -c > {tmp_files[0]}'

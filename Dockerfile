@@ -136,6 +136,6 @@ ENV JAVA_LIBRARY_PATH /usr/lib/jni
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 ENV CLASSPATH /opt/gatk/gatk.jar:${CLASSPATH}
 ENV BCFTOOLS_PLUGINS /usr/local/src/bcftools/plugins
-ENV PATH /opt/gatk/bin:/opt/snpEff/bin:/opt/conda/envs/gatk/bin:/opt/conda/bin:${PATH}
+ENV PATH /opt/gatk/bin:/opt/conda/envs/gatk/bin:/opt/conda/bin:/opt/snpEff/bin:${PATH}
 
 ENTRYPOINT ["/opt/conda/bin/vanqc"]
