@@ -88,7 +88,7 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
                         self.input()[0].path if self.normalize_vcf
                         else self.input_vcf_path
                     ).stem
-                ) + '.ensembl_vep.txt.gz'
+                ) + '.vep.txt.gz'
             )
         )
 

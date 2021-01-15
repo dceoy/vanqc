@@ -9,8 +9,8 @@ from .core import VanqcTask
 
 class CollectVariantCallingMetrics(VanqcTask):
     input_vcf_path = luigi.Parameter()
-    dbsnp_vcf_path = luigi.Parameter()
     fa_path = luigi.Parameter()
+    dbsnp_vcf_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
     picard = luigi.Parameter(default='picard')
     n_cpu = luigi.IntParameter(default=1)

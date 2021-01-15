@@ -11,6 +11,7 @@ COPY --from=dceoy/vep:latest /usr/local/src/bioperl-ext /usr/local/src/bioperl-e
 COPY --from=dceoy/vep:latest /usr/local/src/ensembl-xs /usr/local/src/ensembl-xs
 COPY --from=dceoy/vep:latest /usr/local/src/ensembl-vep /usr/local/src/ensembl-vep
 ADD https://raw.githubusercontent.com/dceoy/print-github-tags/master/print-github-tags /usr/local/bin/print-github-tags
+ADD http://www.ukern.de/tex/xcolor/tex/xcolor.sty.gz /usr/local/src/xcolor.sty.gz
 ADD . /tmp/vanqc
 
 RUN set -e \
@@ -49,6 +50,7 @@ RUN set -e \
       && ./configure --enable-libgsl --enable-perl-filters \
       && make \
       && make install \
+      && gzip -d /usr/local/src/xcolor.sty.gz \
       && cd /usr/local/src/kent/src/lib \
       && make clean \
       && export KENT_SRC=/usr/local/src/kent/src \
@@ -136,6 +138,7 @@ ENV JAVA_LIBRARY_PATH /usr/lib/jni
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64/
 ENV CLASSPATH /opt/gatk/gatk.jar:${CLASSPATH}
 ENV BCFTOOLS_PLUGINS /usr/local/src/bcftools/plugins
+ENV TEXINPUTS /usr/local/src/xcolor.sty
 ENV PATH /opt/gatk/bin:/opt/conda/envs/gatk/bin:/opt/conda/bin:/opt/snpEff/bin:${PATH}
 
 ENTRYPOINT ["/opt/conda/bin/vanqc"]
