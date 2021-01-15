@@ -225,8 +225,7 @@ def main():
                 'cache_data_dir_path': args['<cache_data_dir_path>'],
                 'normalize_vcf': args['--normalize'],
                 **{
-                    c: fetch_executable(c)
-                    for c in ['vep', 'pigz', 'bcftools']
+                    c: fetch_executable(c) for c in ['vep', 'pigz', 'bcftools']
                 },
                 **common_kwargs
             }
@@ -240,6 +239,10 @@ def main():
         elif args['stats']:
             kwargs = {
                 'bcftools': fetch_executable('bcftools'),
+                **{
+                    c: fetch_executable(c)
+                    for c in ['bcftools', 'perl', 'python3', 'pdflatex']
+                },
                 'plot_vcfstats': fetch_executable('plot-vcfstats'),
                 **{k: v for k, v in common_kwargs.items() if k != 'memory_mb'}
             }

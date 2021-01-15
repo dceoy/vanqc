@@ -36,7 +36,7 @@ class CollectVariantCallingMetrics(VanqcTask):
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')
         output_txt = Path(self.output().path)
         self.setup_shell(
-            run_id=run_id, commands=self.picard, cwd=input_vcf.parent,
+            run_id=run_id, commands=self.picard, cwd=output_txt.parent,
             **self.sh_config,
             env={
                 'JAVA_TOOL_OPTIONS': self.generate_gatk_java_options(

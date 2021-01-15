@@ -67,6 +67,9 @@ class CollectVcfStats(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     bcftools = luigi.Parameter(default='bcftools')
     plot_vcfstats = luigi.Parameter(default='plot-vcfstats')
+    perl = luigi.Parameter(default='perl')
+    python3 = luigi.Parameter(default='python3')
+    pdflatex = luigi.Parameter(default='pdflatex')
     n_cpu = luigi.IntParameter(default=1)
     sh_config = luigi.DictParameter(default=dict())
     priority = 10
@@ -91,8 +94,9 @@ class CollectVcfStats(VanqcTask):
         output_txt = Path(self.output()[0].path)
         plot_dir = Path(self.output()[1].path)
         self.setup_shell(
-            run_id=run_id, commands=self.bcftools, cwd=output_txt.parent,
-            **self.sh_config
+            run_id=run_id,
+            commands=[self.bcftools, self.perl, self.python3, self.pdflatex],
+            cwd=output_txt.parent, **self.sh_config
         )
         self.run_shell(
             args=(
