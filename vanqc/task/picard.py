@@ -21,7 +21,7 @@ class CollectVariantCallingMetrics(VanqcTask):
     def output(self):
         output_path_prefix = str(
             Path(self.dest_dir_path).resolve().joinpath(
-                Path(Path(self.input_vcf_path).stem).stem
+                Path(self.input_vcf_path).stem
             )
         )
         return [

@@ -111,7 +111,7 @@ class CollectVcfStats(VanqcTask):
                 + f' {output_txt}'
             ),
             input_files_or_dirs=output_txt,
-            output_files_or_dirs=plot_dir
+            output_files_or_dirs=[plot_dir, plot_dir.joinpath('summary.pdf')]
         )
 
 
