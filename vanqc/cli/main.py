@@ -3,27 +3,32 @@
 Variant Annotator and QC Checker for Human Genome Sequencing
 
 Usage:
-    vanqc download [--debug|--info] [--cpus=<int>] [--hg19]
+    vanqc download [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--hg19]
         [--snpeff|--funcotator|--vep] [--snpeff-jar=<path>]
         [--snpeff-db=<name>] [--http] [--dest-dir=<path>]
-    vanqc normalize [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--dest-dir=<path>] <fa_path> <vcf_path>...
-    vanqc snpeff [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--snpeff-jar=<path>] [--normalize] [--dest-dir=<path>]
-        <db_data_dir_path> <fa_path> <vcf_path>...
-    vanqc funcotator [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--normalize] [--dest-dir=<path>] <data_src_dir_path>
-        <fa_path> <vcf_path>...
-    vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--hg19] [--dest-dir=<path>] <data_src_dir_path> <fa_path>
-        <seg_path>...
-    vanqc vep [--debug|--info] [--cpus=<int>] [--skip-cleaning] [--hg19]
-        [--normalize] [--dest-dir=<path>] <cache_data_dir_path> <fa_path>
+    vanqc normalize [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
         <vcf_path>...
-    vanqc stats [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--dest-dir=<path>] <fa_path> <vcf_path>...
-    vanqc metrics [--debug|--info] [--cpus=<int>] [--skip-cleaning]
-        [--dest-dir=<path>] <fa_path> <dbsnp_vcf_path> <vcf_path>...
+    vanqc snpeff [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--hg19] [--snpeff-jar=<path>]
+        [--normalize] [--dest-dir=<path>] <db_data_dir_path> <fa_path>
+        <vcf_path>...
+    vanqc funcotator [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--hg19] [--normalize]
+        [--dest-dir=<path>] <data_src_dir_path> <fa_path> <vcf_path>...
+    vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--hg19] [--dest-dir=<path>]
+        <data_src_dir_path> <fa_path> <seg_path>...
+    vanqc vep [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--hg19] [--normalize]
+        [--dest-dir=<path>] <cache_data_dir_path> <fa_path> <vcf_path>...
+    vanqc stats [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
+        <vcf_path>...
+    vanqc metrics [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
+        <dbsnp_vcf_path> <vcf_path>...
     vanqc -h|--help
     vanqc --version
 
@@ -42,13 +47,15 @@ Options:
     --version               Print version and exit
     --debug, --info         Execute a command with debug|info messages
     --cpus=<int>            Limit CPU cores used
+    --workers=<int>         Specify the maximum number of workers [default: 1]
+    --skip-cleaning         Skip incomlete file removal when a task fails
+    --print-subprocesses    Print STDOUT/STDERR outputs from subprocesses
     --hg19                  Use hg19 instead of hg38 (default) as a reference
     --snpeff, --funotator, --vep
                             Select only one of SnpEff, Funcotator, and VEP
     --snpeff-jar=<path>     Specify a path to snpEff.jar
     --http                  Use HTTP instead of FTP (for VEP)
     --dest-dir=<path>       Specify a destination directory path [default: .]
-    --skip-cleaning         Skip incomlete file removal when a task fails
     --normalize             Normalize VCF files
 
 Args:
@@ -109,7 +116,8 @@ def main():
     memory_mb = virtual_memory().total / 1024 / 1024 / 2
     sh_config = {
         'log_dir_path': args['--dest-dir'],
-        'remove_if_failed': (not args['--skip-cleaning']), 'quiet': False,
+        'remove_if_failed': (not args['--skip-cleaning']),
+        'quiet': (not args['--print-subprocesses']),
         'executable': fetch_executable('bash')
     }
     if args['download']:
@@ -120,6 +128,7 @@ def main():
         common_kwargs = {
             'dest_dir_path': args['--dest-dir'], 'sh_config': sh_config
         }
+        n_worker = min(int(args['--workers']), len(anns), n_cpu)
         build_luigi_tasks(
             tasks=(
                 (
@@ -135,7 +144,8 @@ def main():
                 ) + (
                     [
                         DownloadFuncotatorDataSources(
-                            gatk=fetch_executable('gatk'), n_cpu=n_cpu,
+                            gatk=fetch_executable('gatk'),
+                            n_cpu=max(floor(n_cpu / n_worker), 1),
                             memory_mb=memory_mb, **common_kwargs
                         )
                     ] if 'funcotator' in anns else list()
@@ -150,13 +160,13 @@ def main():
                     ] if 'vep' in anns else list()
                 )
             ),
-            log_level=log_level
+            workers=n_worker, log_level=log_level
         )
     else:
-        n_target = len(
+        n_sample = len(
             args['<seg_path>' if args['funcotatesegments'] else '<vcf_path>']
         )
-        n_worker = min(n_target, n_cpu)
+        n_worker = min(int(args['--workers']), n_cpu, n_sample)
         common_kwargs = {
             'fa_path': args['<fa_path>'], 'dest_dir_path': args['--dest-dir'],
             'n_cpu': max(floor(n_cpu / n_worker), 1),
