@@ -17,7 +17,7 @@ Dependent commands:
 - `pigz`
 - `bgzip`
 - `tabix`
-- `bcftools`
+- `bcftools` (and `plot-vcfstats`)
 - `java`
 - `snpEff` (`java -jar snpEff.jar`)
 - `gatk`

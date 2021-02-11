@@ -77,8 +77,7 @@ class CollectVcfStats(VanqcTask):
     def output(self):
         output_path_prefix = str(
             Path(self.dest_dir_path).resolve().joinpath(
-                re.sub(r'\.vcf$', '', Path(self.input_vcf_path).stem)
-                + '.vcf.stats'
+                Path(self.input_vcf_path).stem + '.stats'
             )
         )
         return [
