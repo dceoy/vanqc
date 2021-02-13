@@ -10,7 +10,7 @@ Installation
 ------------
 
 ```sh
-$ pip install -U https://github.com/dceoy/vanqc/archive/main.tar.gz
+$ pip install -U vanqc
 ```
 
 Dependent commands:
