@@ -11,6 +11,7 @@ COPY --from=dceoy/vep:latest /usr/local/src/bioperl-ext /usr/local/src/bioperl-e
 COPY --from=dceoy/vep:latest /usr/local/src/ensembl-xs /usr/local/src/ensembl-xs
 COPY --from=dceoy/vep:latest /usr/local/src/ensembl-vep /usr/local/src/ensembl-vep
 ADD https://raw.githubusercontent.com/dceoy/print-github-tags/master/print-github-tags /usr/local/bin/print-github-tags
+ADD https://bootstrap.pypa.io/get-pip.py /tmp/get-pip.py
 ADD . /tmp/vanqc
 
 RUN set -e \
@@ -33,10 +34,12 @@ ENV PATH /opt/gatk/bin:/opt/conda/envs/gatk/bin:/opt/conda/bin:${PATH}
 RUN set -e \
       && source /opt/gatk/gatkenv.rc \
       && /opt/conda/bin/conda update -n base -c defaults conda \
+      && /opt/conda/bin/python3 /tmp/get-pip.py \
       && /opt/conda/bin/python3 -m pip install -U --no-cache-dir /tmp/vanqc \
       && /opt/conda/bin/conda clean -yaf \
       && find /opt/conda -follow -type f -name '*.a' -delete \
-      && find /opt/conda -follow -type f -name '*.pyc' -delete
+      && find /opt/conda -follow -type f -name '*.pyc' -delete \
+      && rm -rf /root/.cache/pip /tmp/get-pip.py
 
 RUN set -e \
       && cd /usr/local/src/bcftools/htslib-* \
