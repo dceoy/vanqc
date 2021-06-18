@@ -5,6 +5,7 @@ Variant Annotator and QC Checker for Human Genome Sequencing
 
 [![Test](https://github.com/dceoy/vanqc/actions/workflows/test.yml/badge.svg)](https://github.com/dceoy/vanqc/actions/workflows/test.yml)
 [![Upload Python Package](https://github.com/dceoy/vanqc/actions/workflows/python-publish.yml/badge.svg)](https://github.com/dceoy/vanqc/actions/workflows/python-publish.yml)
+[![CI to Docker Hub](https://github.com/dceoy/vanqc/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/dceoy/vanqc/actions/workflows/docker-publish.yml)
 
 Installation
 ------------
