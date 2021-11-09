@@ -13,6 +13,7 @@ class CollectVariantCallingMetrics(VanqcTask):
     dbsnp_vcf_path = luigi.Parameter()
     dest_dir_path = luigi.Parameter(default='.')
     picard = luigi.Parameter(default='picard')
+    add_collectvariantcallingmetrics_args = luigi.ListParameter(default=list())
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -54,9 +55,12 @@ class CollectVariantCallingMetrics(VanqcTask):
             args=(
                 f'set -e && {self.picard} CollectVariantCallingMetrics'
                 + f' --INPUT {input_vcf}'
-                + f' --DBSNP {dbsnp_vcf}'
                 + f' --REFERENCE_SEQUENCE {fa}'
                 + f' --SEQUENCE_DICTIONARY {fa_dict}'
+                + f' --DBSNP {dbsnp_vcf}'
+                + ''.join(
+                    f' {a}' for a in self.add_collectvariantcallingmetrics_args
+                )
                 + ' --OUTPUT {}'.format(dest_dir.joinpath(tmp_txts[0].stem))
             ),
             input_files_or_dirs=[input_vcf, fa, f'{fa}.fai', fa_dict],

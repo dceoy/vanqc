@@ -69,7 +69,7 @@ Args:
     <cache_data_dir_path>   Path to a VEP cache data directory
                             (e.g., ./vep_cache/homo_sapiens)
     <seg_path>              Path to a segment TSV files
-    <dbsnp_vcf_path>        Path to a reference dbSNP file
+    <dbsnp_vcf_path>        Path to a dbSNP VCF file
 """
 
 import logging

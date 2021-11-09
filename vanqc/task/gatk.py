@@ -12,6 +12,9 @@ from .core import VanqcTask
 class DownloadFuncotatorDataSources(VanqcTask):
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
+    add_funcotatordatasourcedownloader_args = luigi.ListParameter(
+        default=['--validate-integrity', '--extract-after-download']
+    )
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -54,8 +57,12 @@ class DownloadFuncotatorDataSources(VanqcTask):
             self.run_shell(
                 args=(
                     f'set -e && {self.gatk} FuncotatorDataSourceDownloader'
-                    + ' --validate-integrity --extract-after-download'
-                    + f' --{k} --output {v}'
+                    + f' --{k}'
+                    + ''.join(
+                        f' {a}'
+                        for a in self.add_funcotatordatasourcedownloader_args
+                    )
+                    + f' --output {v}'
                 ),
                 output_files_or_dirs=v
             )
@@ -82,9 +89,10 @@ class AnnotateVariantsWithFuncotator(VanqcTask):
     norm_dir_path = luigi.Parameter(default='')
     bcftools = luigi.Parameter(default='bcftools')
     gatk = luigi.Parameter(default='gatk')
+    output_file_format = luigi.Parameter(default='VCF')
+    add_funcotator_args = luigi.ListParameter(default=list())
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
-    output_file_format = luigi.Parameter(default='VCF')
     sh_config = luigi.DictParameter(default=dict())
     priority = 10
 
@@ -140,11 +148,12 @@ class AnnotateVariantsWithFuncotator(VanqcTask):
             args=(
                 f'set -e && {self.gatk} Funcotator'
                 + f' --variant {input_vcf}'
-                + f' --data-sources-path {data_src_dir}'
                 + f' --reference {fa}'
                 + f' --ref-version {self.ref_version}'
-                + f' --output {output_files[0]}'
+                + f' --data-sources-path {data_src_dir}'
                 + f' --output-file-format {self.output_file_format}'
+                + ''.join(f' {a}' for a in self.add_funcotator_args)
+                + f' --output {output_files[0]}'
             ),
             input_files_or_dirs=[input_vcf, fa, fa_dict, data_src_dir],
             output_files_or_dirs=output_files,
@@ -158,6 +167,7 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
     ref_version = luigi.Parameter(default='hg38')
     dest_dir_path = luigi.Parameter(default='.')
     gatk = luigi.Parameter(default='gatk')
+    add_funcotatesegments_args = luigi.ListParameter(default=list())
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -192,11 +202,12 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
             args=(
                 f'set -e && {self.gatk} FuncotateSegments'
                 + f' --segments {input_tsv}'
-                + f' --data-sources-path {data_src_dir}'
                 + f' --reference {fa}'
                 + f' --ref-version {self.ref_version}'
-                + f' --output {output_tsv}'
+                + f' --data-sources-path {data_src_dir}'
                 + ' --output-file-format SEG'
+                + ''.join(f' {a}' for a in self.add_funcotatesegments_args)
+                + f' --output {output_tsv}'
             ),
             input_files_or_dirs=[input_tsv, fa, fa_dict, data_src_dir],
             output_files_or_dirs=output_tsv

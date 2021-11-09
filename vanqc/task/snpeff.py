@@ -61,6 +61,7 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
     snpeff = luigi.Parameter(default='snpeff')
     bgzip = luigi.Parameter(default='bgzip')
     tabix = luigi.Parameter(default='tabix')
+    add_ann_args = luigi.ListParameter(default=list())
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -113,8 +114,10 @@ class AnnotateVariantsWithSnpeff(VanqcTask):
         self.run_shell(
             args=(
                 f'set -eo pipefail && cd {tmp_dir} && {self.snpeff} ann'
+                + f' {db_data_dir.name}'
                 + f' -configOption data.dir={db_data_dir.parent}'
-                + f' {db_data_dir.name} {input_vcf}'
+                + ''.join(f' {a}' for a in self.add_ann_args)
+                + f' {input_vcf}'
                 + f' | {self.bgzip} -@ {self.n_cpu} -c > {tmp_files[0]}'
             ),
             input_files_or_dirs=[input_vcf, db_data_dir, tmp_dir],

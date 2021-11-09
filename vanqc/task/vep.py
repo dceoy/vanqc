@@ -63,6 +63,7 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
     bcftools = luigi.Parameter(default='bcftools')
     vep = luigi.Parameter(default='vep')
     pigz = luigi.Parameter(default='pigz')
+    add_vep_args = luigi.ListParameter(default=list())
     n_cpu = luigi.IntParameter(default=1)
     memory_mb = luigi.FloatParameter(default=4096)
     sh_config = luigi.DictParameter(default=dict())
@@ -110,9 +111,10 @@ class AnnotateVariantsWithEnsemblVep(VanqcTask):
         self.run_shell(
             args=(
                 f'set -e && {self.vep}'
-                + f' --cache --species {cache_data_dir.name}'
-                + f' --dir {cache_data_dir.parent}'
+                + f' --species {cache_data_dir.name}'
                 + f' --input_file {input_vcf}'
+                + ''.join(f' {a}' for a in self.add_vep_args)
+                + f' --cache --dir {cache_data_dir.parent}'
                 + f' --output_file {tmp_txt}'
             ),
             input_files_or_dirs=[input_vcf, cache_data_dir],
