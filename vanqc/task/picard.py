@@ -32,10 +32,9 @@ class CollectVariantCallingMetrics(VanqcTask):
         ]
 
     def run(self):
-        target_vcf = Path(self.input_vcf_path)
-        run_id = Path(target_vcf.stem).stem
+        run_id = Path(self.input_vcf_path).stem
         self.print_log(f'Collect variant calling metrics:\t{run_id}')
-        input_vcf = target_vcf.resolve()
+        input_vcf = Path(self.input_vcf_path).resolve()
         dbsnp_vcf = Path(self.dbsnp_vcf_path).resolve()
         fa = Path(self.fa_path).resolve()
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')

@@ -181,10 +181,9 @@ class AnnotateSegWithFuncotateSegments(VanqcTask):
         )
 
     def run(self):
-        target_tsv = Path(self.input_seg_path)
-        run_id = target_tsv.stem
+        run_id = Path(self.input_seg_path).stem
         self.print_log(f'Annotate segments with FuncotateSegments:\t{run_id}')
-        input_tsv = target_tsv.resolve()
+        input_tsv = Path(self.input_seg_path).resolve()
         data_src_dir = Path(self.data_src_dir_path).resolve()
         fa = Path(self.fa_path).resolve()
         fa_dict = fa.parent.joinpath(f'{fa.stem}.dict')

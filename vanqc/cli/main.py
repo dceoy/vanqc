@@ -251,7 +251,6 @@ def main():
             )
         elif args['stats']:
             kwargs = {
-                'bcftools': fetch_executable('bcftools'),
                 **{
                     c: fetch_executable(c)
                     for c in ['bcftools', 'perl', 'python3', 'pdflatex']
