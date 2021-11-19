@@ -6,29 +6,31 @@ Usage:
     vanqc download [--debug|--info] [--cpus=<int>] [--workers=<int>]
         [--skip-cleaning] [--print-subprocesses] [--hg19]
         [--snpeff|--funcotator|--vep] [--snpeff-jar=<path>]
-        [--snpeff-db=<name>] [--http] [--dest-dir=<path>]
+        [--snpeff-db=<name>] [--http] [--dest-dir=<path>] [--log-dir=<path>]
     vanqc normalize [--debug|--info] [--cpus=<int>] [--workers=<int>]
-        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
-        <vcf_path>...
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>]
+        [--log-dir=<path>] <fa_path> <vcf_path>...
     vanqc snpeff [--debug|--info] [--cpus=<int>] [--workers=<int>]
         [--skip-cleaning] [--print-subprocesses] [--hg19] [--snpeff-jar=<path>]
-        [--normalize] [--dest-dir=<path>] <db_data_dir_path> <fa_path>
-        <vcf_path>...
+        [--normalize] [--dest-dir=<path>] [--log-dir=<path>] <db_data_dir_path>
+        <fa_path> <vcf_path>...
     vanqc funcotator [--debug|--info] [--cpus=<int>] [--workers=<int>]
         [--skip-cleaning] [--print-subprocesses] [--hg19] [--normalize]
-        [--dest-dir=<path>] <data_src_dir_path> <fa_path> <vcf_path>...
+        [--dest-dir=<path>] [--log-dir=<path>] <data_src_dir_path> <fa_path>
+        <vcf_path>...
     vanqc funcotatesegments [--debug|--info] [--cpus=<int>] [--workers=<int>]
         [--skip-cleaning] [--print-subprocesses] [--hg19] [--dest-dir=<path>]
-        <data_src_dir_path> <fa_path> <seg_path>...
+        [--log-dir=<path>] <data_src_dir_path> <fa_path> <seg_path>...
     vanqc vep [--debug|--info] [--cpus=<int>] [--workers=<int>]
         [--skip-cleaning] [--print-subprocesses] [--hg19] [--normalize]
-        [--dest-dir=<path>] <cache_data_dir_path> <fa_path> <vcf_path>...
-    vanqc stats [--debug|--info] [--cpus=<int>] [--workers=<int>]
-        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
+        [--dest-dir=<path>] [--log-dir=<path>] <cache_data_dir_path> <fa_path>
         <vcf_path>...
+    vanqc stats [--debug|--info] [--cpus=<int>] [--workers=<int>]
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>]
+        [--log-dir=<path>] <fa_path> <vcf_path>...
     vanqc metrics [--debug|--info] [--cpus=<int>] [--workers=<int>]
-        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>] <fa_path>
-        <dbsnp_vcf_path> <vcf_path>...
+        [--skip-cleaning] [--print-subprocesses] [--dest-dir=<path>]
+        [--log-dir=<path>] <fa_path> <dbsnp_vcf_path> <vcf_path>...
     vanqc -h|--help
     vanqc --version
 
@@ -56,6 +58,7 @@ Options:
     --snpeff-jar=<path>     Specify a path to snpEff.jar
     --http                  Use HTTP instead of FTP (for VEP)
     --dest-dir=<path>       Specify a destination directory path [default: .]
+    --log-dir=<path>        Specify an output log directory path
     --normalize             Normalize VCF files
 
 Args:
@@ -115,7 +118,7 @@ def main():
     n_cpu = int(args['--cpus'] or cpu_count())
     memory_mb = virtual_memory().total / 1024 / 1024 / 2
     sh_config = {
-        'log_dir_path': args['--dest-dir'],
+        'log_dir_path': (args['--log-dir'] or args['--dest-dir']),
         'remove_if_failed': (not args['--skip-cleaning']),
         'quiet': (not args['--print-subprocesses']),
         'executable': fetch_executable('bash')
